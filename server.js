@@ -88,11 +88,15 @@ app.post('/api/scan', async (req, res) => {
   // flag is only honored when accompanied by the private FORCE_RESCAN_KEY (set in env).
   const allowForce = !!force && !!process.env.FORCE_RESCAN_KEY && safeEqual(forceKey || '', process.env.FORCE_RESCAN_KEY);
 
+  // Result caching is OFF by default for now — every scan runs fresh so the latest scanner
+  // logic always shows. Re-enable later by setting SCAN_CACHE_ENABLED=true in the environment.
+  const cacheEnabled = process.env.SCAN_CACHE_ENABLED === 'true';
+
   try {
     const domain = new URL(url.startsWith('http') ? url : 'https://' + url).hostname;
 
-    // Check if we have a recent scan (skip only when an authorized force is requested)
-    if (!allowForce) {
+    // Serve a recent cached scan only when caching is enabled and this isn't an authorized force.
+    if (!allowForce && cacheEnabled) {
       const existingSite = await db.getSiteByDomain(domain);
     if (existingSite) {
       const latestScan = await db.getLatestScan(existingSite.id);
