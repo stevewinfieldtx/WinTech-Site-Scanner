@@ -55,6 +55,49 @@
   // Impact class
   function ic(impact) { return impact === 'Critical' ? '#ef4444' : impact === 'High' ? '#f97316' : '#f59e0b'; }
 
+  // Insight box helper
+  function insight(content) {
+    return `<div style="margin-top:32px;background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid #4f46e5;border-radius:12px;padding:24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:16px">💡</span>
+        <span style="font-size:14px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:1px">WinTech Insight</span>
+      </div>
+      <div style="font-size:14px;color:#cbd5e1;line-height:1.8">${content}</div>
+    </div>`;
+  }
+
+  // Generate dynamic insights per tab
+  const lowestCat = Object.values(cats).sort((a,b) => a.score - b.score)[0];
+  const highestCat = Object.values(cats).sort((a,b) => b.score - a.score)[0];
+  const seoFindings = findings.filter(f => f.cat === 'SEO').length;
+  const aeoFindings = findings.filter(f => f.cat === 'AEO').length;
+  const secFindings = findings.filter(f => f.cat === 'Security').length;
+
+  const overviewInsight = insight(
+    `<p style="margin-bottom:12px"><strong>Your biggest opportunity is ${lowestCat.name}.</strong> At ${lowestCat.score}%, this category is pulling your overall score down the most. ${highestCat.name} is your strongest area at ${highestCat.score}%, which means the foundation is there — you're not starting from scratch.</p>` +
+    `<p>${overall < 40 ? 'Sites scoring below 40 are effectively invisible to both search engines and AI answer engines. The good news: the gap between "broken" and "average" is where the easiest wins live. Most of these fixes take hours, not weeks.' : overall < 70 ? 'You have a functional site with specific gaps. This is the best position to be in — you don\'t need a rebuild, you need targeted fixes that compound on each other.' : 'This is a strong score. Focus on the remaining gaps to move from good to elite. At this level, each improvement delivers outsized returns because the foundation is already solid.'}</p>`
+  );
+
+  const findingsInsight = insight(
+    `<p style="margin-bottom:12px"><strong>${findings.length} findings break down to ${seoFindings} SEO, ${aeoFindings} AEO, and ${secFindings} security issues.</strong> ${seoFindings + aeoFindings > secFindings ? 'The concentration in SEO and AEO means your site\'s visibility problem is bigger than its security problem. Fixing search presence should come first — you can\'t convert visitors you don\'t have.' : 'Security findings are prominent here. For B2B buyers who research vendors before making contact, visible security gaps erode trust before the first conversation happens.'}</p>` +
+    `<p>${criticalCount > 0 ? `The ${criticalCount} critical issues should be addressed within the next 7 days. Each one is actively costing you discoverability or credibility right now. The non-critical findings are optimization opportunities that compound over time.` : 'No critical issues found — that\'s a strong position. The findings here are optimization opportunities. Prioritize by impact and work through them systematically.'}</p>`
+  );
+
+  const technicalInsight = insight(
+    `<p style="margin-bottom:12px"><strong>${perf.ttfb && perf.ttfb < 200 ? 'Server response time is solid.' : 'Server response could be faster.'}</strong> ${perf.ttfb ? `Your ${perf.ttfb}ms TTFB ${perf.ttfb < 100 ? 'is excellent — in the top tier globally.' : perf.ttfb < 200 ? 'is good — visitors aren\'t waiting.' : perf.ttfb < 500 ? 'is acceptable but could be improved with CDN caching or server optimization.' : 'is slow enough to impact both user experience and search rankings. Google uses server response time as a ranking signal.'}` : 'TTFB data was not available for this scan.'}</p>` +
+    `<p>${(perf.renderBlockingJs || 0) > 10 ? `${perf.renderBlockingJs} render-blocking scripts is high. Each one delays the first paint the visitor sees. Adding defer or async attributes is a zero-risk change that can measurably improve perceived speed.` : (perf.lazyLoadedImages || 0) === 0 && (perf.totalImages || 0) > 3 ? `None of your ${perf.totalImages} images use lazy loading. On mobile connections, every image loads upfront whether the visitor scrolls to it or not. Adding loading="lazy" to below-the-fold images is a one-line fix per image.` : 'The technical foundation is reasonably clean. Focus optimization efforts on the other categories where the score gaps are larger.'}</p>`
+  );
+
+  const seoInsight = insight(
+    `<p style="margin-bottom:12px"><strong>${!seo.metaDescription?.exists || !seo.h1?.count ? 'Your site is missing basic search signals that Google has expected since 2010.' : 'Core SEO elements are in place.'}</strong> ${!seo.metaDescription?.exists ? 'Without a meta description, Google auto-generates your search snippet from random page content. You lose control of your first impression in search results.' : ''} ${!seo.h1?.count ? 'Without an H1 tag, search engines have no clear signal about what this page is about.' : ''}</p>` +
+    `<p><strong>AEO is the 2026 frontier.</strong> ${!aeo.jsonLd?.exists ? 'You have zero structured data. This means AI answer engines like ChatGPT, Perplexity, and Google AI Overviews cannot extract your business identity, services, or expertise in a machine-readable way. 71% of pages cited by ChatGPT use schema markup — without it, you\'re excluded from AI-generated answers about your industry.' : `You have ${aeo.jsonLd.count} schema(s) implemented (${aeo.jsonLd.types?.join(', ')}). ${!aeo.faqSchema ? 'Adding FAQ schema would increase your chances of appearing in featured snippets and AI citations.' : 'FAQ schema is in place — this positions you well for AI answer engine citations.'}`}</p>`
+  );
+
+  const securityInsight = insight(
+    `<p style="margin-bottom:12px"><strong>${(sh.headersSet || 0) === 0 ? 'Zero security headers is a credibility problem, not just a technical one.' : `${sh.headersSet} of ${sh.headersTotal} security headers are configured.`}</strong> ${(sh.headersSet || 0) < 3 ? 'B2B buyers increasingly run security evaluations on vendors before engaging. Security-conscious prospects — especially in enterprise, financial services, and healthcare — will notice missing headers in their due diligence. This can silently disqualify you before a conversation starts.' : 'Your header configuration is reasonable. Focus on adding any missing headers and ensuring your Observatory score reflects the full picture.'}</p>` +
+    `<p>${ssl.valid ? 'SSL is active and valid, which is the baseline expectation.' : 'SSL issues are a critical fix — browsers will show warning pages that destroy visitor trust immediately.'} ${obsGrade && !['N/A', 'Pending'].includes(obsGrade) ? `Mozilla Observatory grades you at ${obsGrade}. ${['A+','A','B+','B'].includes(obsGrade) ? 'This is a strong security posture.' : ['C+','C'].includes(obsGrade) ? 'This is middling — enough to pass basic checks but room to improve.' : 'This grade will concern security-aware buyers. Addressing the failing Observatory checks should be a priority.'}` : 'Mozilla Observatory results were not available for this scan.'}</p>`
+  );
+
   // Count findings
   const criticalCount = findings.filter(f => f.impact === 'Critical').length;
   const aiFix = findings.filter(f => f.cat === 'SEO' || f.cat === 'AEO' || f.cat === 'Content').length;
@@ -211,12 +254,14 @@
         <p>The site scored <strong style="color:${ringColor}">${overall}/100 (${gr(overall)})</strong>. ${overall < 40 ? 'This score indicates significant issues that are likely costing the business organic traffic, AI visibility, and lead generation.' : overall < 70 ? 'This score indicates room for improvement across multiple categories.' : 'This is a solid foundation with targeted improvements available.'}</p>
         <p><strong>${criticalCount} critical issues</strong> were found that require immediate attention. ${findings.length} total findings were identified across the scan.</p>
       </div>
+      ${overviewInsight}
     </div>
 
     <!-- FINDINGS -->
     <div class="pnl" id="p-findings">
       <div class="sec"><h2>All Findings</h2><p>${findings.length} issues found — click to expand</p></div>
       <div class="fl">${findingsHtml}</div>
+      ${findingsInsight}
     </div>
 
     <!-- TECHNICAL -->
@@ -244,6 +289,7 @@
         { label: 'Best Practices', value: psScores['best-practices'] || 0, color: sc(psScores['best-practices'] || 0) },
         { label: 'SEO', value: psScores.seo || 0, color: sc(psScores.seo || 0) },
       ])}` : ''}
+      ${technicalInsight}
     </div>
 
     <!-- SEO & AEO -->
@@ -259,6 +305,7 @@
           <div class="cl">${aeoChecks}</div>
         </div>
       </div>
+      ${seoInsight}
     </div>
 
     <!-- SECURITY -->
@@ -271,6 +318,7 @@
       </div>
       <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">Security Headers</h3>
       <div class="cl">${secChecks}</div>
+      ${securityInsight}
     </div>
 
     <!-- REVENUE IMPACT -->
@@ -303,6 +351,15 @@
           <input type="range" id="sl-conv" min="0" max="15" step="0.1" value="0.3" style="width:100%" oninput="calcRev()">
           <input type="text" id="v-conv" value="0.3%" onchange="syncSl('conv')" style="background:transparent;border:1px solid transparent;border-radius:6px;color:#e2e8f0;font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;text-align:center;width:100%;padding:4px;outline:none;margin-top:8px" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='transparent'" onkeydown="if(event.key==='Enter')this.blur()">
         </div>
+      </div>
+      <div class="sec"><h2>Benchmark Sources</h2><p>Published data behind these estimates</p></div>
+      <div class="panel" style="font-size:13px;line-height:1.8">
+        <p><strong style="color:#6366f1">Organic Search Revenue Share:</strong> Organic search generates 44.6% of all B2B revenue, making it the largest single revenue channel. SEO drives roughly 62% of B2B website traffic. <span style="color:#64748b">— SalesHive, Oliver Munro (2025-2026)</span></p>
+        <p><strong style="color:#6366f1">Conversion Benchmarks:</strong> Typical B2B SaaS visitor-to-lead conversion is 1.5%. Elite websites convert at 8-15%. A 1-point conversion lift cuts customer acquisition cost by 15-25%. <span style="color:#64748b">— First Page Sage, Klickflow, ConversionXperts (2026)</span></p>
+        <p><strong style="color:#6366f1">Schema / Structured Data Impact:</strong> Websites using structured data see CTR improvements of 20-30%. 71% of pages cited by ChatGPT use schema markup. Pages with rich snippets see up to 82% higher CTR. <span style="color:#64748b">— Outpace SEO, Digital Applied, GW Content (2025-2026)</span></p>
+        <p><strong style="color:#6366f1">Meta Tag Optimization:</strong> Pages with custom meta descriptions get ~5.8% more clicks. Well-optimized title tags and descriptions can boost CTR by 10-30%. Organic leads close at 14.6% vs 1.7% for outbound. <span style="color:#64748b">— SEMrush, Straight North, SalesHive (2025-2026)</span></p>
+        <p><strong style="color:#6366f1">Pipeline Velocity:</strong> A 10% increase in win rate can boost pipeline velocity by 33%. MQL-to-SQL conversion typically offers the highest optimization leverage. <span style="color:#64748b">— The Digital Bloom (2025)</span></p>
+        <p style="margin-top:16px;padding-top:16px;border-top:1px solid #1e293b;color:#64748b;font-size:12px"><strong>Disclaimer:</strong> These projections use published industry benchmarks applied to your current website audit data. Actual results will vary based on market conditions, competition, sales execution, and implementation quality. These are directional estimates, not guarantees.</p>
       </div>
     </div>
 
