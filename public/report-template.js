@@ -66,6 +66,11 @@
     </div>`;
   }
 
+  // Count findings
+  const criticalCount = findings.filter(f => f.impact === 'Critical').length;
+  const aiFix = findings.filter(f => f.cat === 'SEO' || f.cat === 'AEO' || f.cat === 'Content').length;
+  const manualFix = findings.length - aiFix;
+
   // Generate dynamic insights per tab
   const lowestCat = Object.values(cats).sort((a,b) => a.score - b.score)[0];
   const highestCat = Object.values(cats).sort((a,b) => b.score - a.score)[0];
@@ -97,11 +102,6 @@
     `<p style="margin-bottom:12px"><strong>${(sh.headersSet || 0) === 0 ? 'Zero security headers is a credibility problem, not just a technical one.' : `${sh.headersSet} of ${sh.headersTotal} security headers are configured.`}</strong> ${(sh.headersSet || 0) < 3 ? 'B2B buyers increasingly run security evaluations on vendors before engaging. Security-conscious prospects — especially in enterprise, financial services, and healthcare — will notice missing headers in their due diligence. This can silently disqualify you before a conversation starts.' : 'Your header configuration is reasonable. Focus on adding any missing headers and ensuring your Observatory score reflects the full picture.'}</p>` +
     `<p>${ssl.valid ? 'SSL is active and valid, which is the baseline expectation.' : 'SSL issues are a critical fix — browsers will show warning pages that destroy visitor trust immediately.'} ${obsGrade && !['N/A', 'Pending'].includes(obsGrade) ? `Mozilla Observatory grades you at ${obsGrade}. ${['A+','A','B+','B'].includes(obsGrade) ? 'This is a strong security posture.' : ['C+','C'].includes(obsGrade) ? 'This is middling — enough to pass basic checks but room to improve.' : 'This grade will concern security-aware buyers. Addressing the failing Observatory checks should be a priority.'}` : 'Mozilla Observatory results were not available for this scan.'}</p>`
   );
-
-  // Count findings
-  const criticalCount = findings.filter(f => f.impact === 'Critical').length;
-  const aiFix = findings.filter(f => f.cat === 'SEO' || f.cat === 'AEO' || f.cat === 'Content').length;
-  const manualFix = findings.length - aiFix;
 
   // Score ring SVG
   const ringR = 76, ringCirc = 2 * Math.PI * ringR;
