@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WinTech Site Scanner — Free Website Audit</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020617; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Hero */
+  .hero {
+    max-width: 720px; margin: 0 auto; padding: 80px 24px 40px; text-align: center;
+  }
+  .hero-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #6366f1;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-size: 42px; font-weight: 900; letter-spacing: -1.5px; line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #e2e8f0, #6366f1);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .hero p { font-size: 16px; color: #94a3b8; line-height: 1.6; max-width: 520px; margin: 0 auto; }
+
+  /* Scan Form */
+  .scan-form {
+    max-width: 600px; margin: 32px auto 0; display: flex; gap: 8px;
+  }
+  .scan-input {
+    flex: 1; padding: 16px 20px; font-size: 16px; border-radius: 12px;
+    border: 2px solid #1e293b; background: #0f172a; color: #e2e8f0;
+    font-family: 'JetBrains Mono', monospace; outline: none; transition: border-color 0.2s;
+  }
+  .scan-input:focus { border-color: #6366f1; }
+  .scan-input::placeholder { color: #475569; }
+  .scan-btn {
+    padding: 16px 32px; font-size: 15px; font-weight: 700; border-radius: 12px;
+    border: none; background: #6366f1; color: #fff; cursor: pointer;
+    font-family: 'Inter', sans-serif; white-space: nowrap; transition: background 0.2s;
+  }
+  .scan-btn:hover { background: #4f46e5; }
+  .scan-btn:disabled { background: #334155; cursor: not-allowed; }
+
+  /* Status */
+  .status {
+    max-width: 600px; margin: 16px auto 0; text-align: center;
+    font-size: 13px; color: #64748b; min-height: 20px;
+  }
+  .status.error { color: #ef4444; }
+  .status .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid #6366f133;
+    border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Gated Preview */
+  .preview {
+    max-width: 720px; margin: 40px auto 0; display: none;
+  }
+  .preview.show { display: block; }
+
+  .preview-card {
+    background: #0f172a; border: 1px solid #1e293b; border-radius: 16px;
+    padding: 32px; text-align: center;
+  }
+  .preview-domain {
+    font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-bottom: 4px;
+    background: linear-gradient(135deg, #e2e8f0, #6366f1);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .preview-date { font-size: 12px; color: #64748b; margin-bottom: 24px; }
+
+  .preview-scores {
+    display: flex; align-items: flex-start; gap: 32px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 24px;
+  }
+  .preview-ring { flex-shrink: 0; }
+  .preview-bars { flex: 1; min-width: 260px; max-width: 400px; text-align: left; }
+  .bar-row { margin-bottom: 10px; }
+  .bar-header { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+  .bar-name { color: #e2e8f0; }
+  .bar-score { font-family: 'JetBrains Mono', monospace; }
+  .bar-track { height: 6px; border-radius: 3px; background: #1e293b; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+  /* Blur overlay for locked content */
+  .locked-overlay {
+    position: relative; margin-top: 24px;
+    background: linear-gradient(180deg, #0f172a 0%, #0f172a88 30%, #0f172a 100%);
+    border-radius: 12px; padding: 48px 32px; text-align: center;
+  }
+  .locked-overlay h3 {
+    font-size: 20px; font-weight: 800; margin-bottom: 8px;
+  }
+  .locked-overlay p {
+    font-size: 14px; color: #94a3b8; margin-bottom: 24px; line-height: 1.6;
+  }
+  .email-form { display: flex; gap: 8px; max-width: 460px; margin: 0 auto; }
+  .email-input {
+    flex: 1; padding: 14px 16px; font-size: 14px; border-radius: 10px;
+    border: 2px solid #1e293b; background: #020617; color: #e2e8f0;
+    font-family: 'Inter', sans-serif; outline: none;
+  }
+  .email-input:focus { border-color: #6366f1; }
+  .email-btn {
+    padding: 14px 24px; font-size: 14px; font-weight: 700; border-radius: 10px;
+    border: none; background: #22c55e; color: #fff; cursor: pointer;
+    font-family: 'Inter', sans-serif; white-space: nowrap;
+  }
+  .email-btn:hover { background: #16a34a; }
+  .email-status {
+    margin-top: 12px; font-size: 13px; color: #64748b; min-height: 20px;
+  }
+  .email-status.error { color: #ef4444; }
+
+  /* Override prompt */
+  .override-prompt {
+    display: none; margin-top: 16px; padding: 16px; border-radius: 10px;
+    background: #1e293b; border: 1px solid #334155;
+  }
+  .override-prompt.show { display: block; }
+  .override-prompt p { font-size: 13px; color: #f59e0b; margin-bottom: 12px; }
+  .override-btn {
+    padding: 10px 20px; font-size: 13px; font-weight: 600; border-radius: 8px;
+    border: 1px solid #f59e0b44; background: #f59e0b11; color: #f59e0b;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  .override-btn:hover { background: #f59e0b22; }
+
+  /* Recent scans */
+  .recent {
+    max-width: 720px; margin: 60px auto 40px; padding: 0 24px;
+  }
+  .recent h2 {
+    font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #94a3b8;
+  }
+  .recent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .recent-card {
+    background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;
+    padding: 16px; text-align: center; cursor: default;
+  }
+  .recent-domain { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+  .recent-score { font-size: 32px; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
+  .recent-date { font-size: 10px; color: #475569; margin-top: 4px; }
+
+  /* Footer */
+  .footer {
+    text-align: center; padding: 40px 24px; border-top: 1px solid #1e293b; margin-top: 60px;
+  }
+  .footer p { font-size: 11px; color: #334155; }
+  .footer a { color: #475569; text-decoration: none; }
+
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 28px; }
+    .scan-form { flex-direction: column; }
+    .email-form { flex-direction: column; }
+    .recent-grid { grid-template-columns: 1fr; }
+    .preview-scores { flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">WinTech Site Scanner</div>
+  <h1>How much revenue is your website leaving on the table?</h1>
+  <p>Free audit across SEO, AI readiness, security, performance, and conversion. See your score in 30 seconds. Get the full report with fixes in your inbox.</p>
+</div>
+
+<div class="scan-form" id="scanForm">
+  <input type="text" class="scan-input" id="urlInput" placeholder="yoursite.com" autocomplete="off" autofocus>
+  <button class="scan-btn" id="scanBtn" onclick="startScan()">Scan Now</button>
+</div>
+<div class="status" id="status"></div>
+
+<!-- Gated Preview -->
+<div class="preview" id="preview">
+  <div class="preview-card">
+    <div class="preview-domain" id="previewDomain"></div>
+    <div class="preview-date" id="previewDate"></div>
+
+    <div class="preview-scores">
+      <div class="preview-ring" id="previewRing"></div>
+      <div class="preview-bars" id="previewBars"></div>
+    </div>
+
+    <div class="locked-overlay">
+      <h3>Unlock Your Full Report</h3>
+      <p>Enter your work email to access the complete audit with findings, security analysis, and revenue impact calculator.</p>
+
+      <div class="email-form">
+        <input type="email" class="email-input" id="emailInput" placeholder="you@yourcompany.com">
+        <button class="email-btn" id="emailBtn" onclick="unlockReport()">Get Report</button>
+      </div>
+      <div class="email-status" id="emailStatus"></div>
+
+      <div class="override-prompt" id="overridePrompt">
+        <p id="overrideMsg"></p>
+        <button class="override-btn" onclick="unlockReport(true)">I have permission to view this report</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Scans -->
+<div class="recent" id="recentSection">
+  <h2>Recent Scans</h2>
+  <div class="recent-grid" id="recentGrid"></div>
+</div>
+
+<div class="footer">
+  <p>WinTech Site Scanner &nbsp;•&nbsp; Powered by <a href="https://wintechpartners.com">WinTech Partners</a></p>
+</div>
+
+<script>
+let currentScanId = null;
+let currentDomain = null;
+
+// Color helper
+function sc(s) {
+  if (s >= 80) return '#22c55e';
+  if (s >= 60) return '#f59e0b';
+  if (s >= 40) return '#f97316';
+  return '#ef4444';
+}
+function grade(s) {
+  if (s >= 90) return 'A';
+  if (s >= 80) return 'B';
+  if (s >= 60) return 'C';
+  if (s >= 40) return 'D';
+  return 'F';
+}
+
+// Enter key to scan
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startScan();
+});
+document.getElementById('emailInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') unlockReport();
+});
+
+// Start scan
+async function startScan() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+
+  const btn = document.getElementById('scanBtn');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+  status.className = 'status';
+  status.innerHTML = '<span class="spinner"></span> Analyzing website... this takes 15-30 seconds';
+  document.getElementById('preview').classList.remove('show');
+
+  try {
+    const resp = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      status.className = 'status error';
+      status.textContent = data.error;
+      btn.disabled = false;
+      btn.textContent = 'Scan Now';
+      return;
+    }
+
+    currentScanId = data.scanId;
+    currentDomain = data.domain;
+    status.textContent = '';
+    showPreview(data);
+
+  } catch (err) {
+    status.className = 'status error';
+    status.textContent = 'Scan failed. Please try again.';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Scan Now';
+}
+
+// Show gated preview
+function showPreview(data) {
+  const scores = data.scores;
+  document.getElementById('previewDomain').textContent = data.domain;
+  document.getElementById('previewDate').textContent = 'Scanned ' + new Date(data.scanDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const overall = scores.overall;
+  const color = sc(overall);
+
+  // Score ring
+  const r = 76, circ = 2 * Math.PI * r;
+  const offset = circ - (overall / 100) * circ;
+  document.getElementById('previewRing').innerHTML = `
+    <svg width="160" height="160">
+      <circle cx="80" cy="80" r="${r}" fill="none" stroke="#1e293b" stroke-width="12"/>
+      <circle cx="80" cy="80" r="${r}" fill="none" stroke="${color}" stroke-width="12"
+        stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+        stroke-linecap="round" transform="rotate(-90 80 80)"/>
+      <text x="80" y="72" text-anchor="middle" fill="${color}" font-size="44" font-weight="800" font-family="Inter,sans-serif">${overall}</text>
+      <text x="80" y="94" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="Inter,sans-serif">/ 100</text>
+      <text x="80" y="114" text-anchor="middle" fill="${color}" font-size="16" font-weight="700" font-family="Inter,sans-serif">${grade(overall)}</text>
+    </svg>
+  `;
+
+  // Category bars
+  const cats = scores.categories;
+  let barsHtml = '';
+  for (const [key, cat] of Object.entries(cats)) {
+    const c = sc(cat.score);
+    barsHtml += `
+      <div class="bar-row">
+        <div class="bar-header">
+          <span class="bar-name">${cat.icon} ${cat.name}</span>
+          <span class="bar-score" style="color:${c}">${cat.score}%</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${cat.score}%;background:linear-gradient(90deg,${c}cc,${c})"></div>
+        </div>
+      </div>
+    `;
+  }
+  document.getElementById('previewBars').innerHTML = barsHtml;
+
+  // Reset email form
+  document.getElementById('emailInput').value = '';
+  document.getElementById('emailStatus').textContent = '';
+  document.getElementById('overridePrompt').classList.remove('show');
+
+  document.getElementById('preview').classList.add('show');
+  document.getElementById('preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Unlock report with email
+async function unlockReport(override = false) {
+  const email = document.getElementById('emailInput').value.trim();
+  if (!email || !email.includes('@')) {
+    document.getElementById('emailStatus').className = 'email-status error';
+    document.getElementById('emailStatus').textContent = 'Please enter a valid email address.';
+    return;
+  }
+
+  const btn = document.getElementById('emailBtn');
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+
+  try {
+    const resp = await fetch('/api/unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, scanId: currentScanId, override }),
+    });
+    const data = await resp.json();
+
+    if (data.status === 'unlocked') {
+      window.location.href = data.reportUrl;
+      return;
+    }
+
+    if (data.status === 'domain_mismatch') {
+      document.getElementById('emailStatus').className = 'email-status error';
+      document.getElementById('emailStatus').textContent = data.message;
+
+      if (data.canOverride) {
+        document.getElementById('overrideMsg').textContent = data.message + ' You can override this once if you have permission to access this report.';
+        document.getElementById('overridePrompt').classList.add('show');
+      }
+    }
+
+  } catch (err) {
+    document.getElementById('emailStatus').className = 'email-status error';
+    document.getElementById('emailStatus').textContent = 'Something went wrong. Try again.';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Get Report';
+}
+
+// Load recent scans
+async function loadRecent() {
+  try {
+    const resp = await fetch('/api/recent');
+    const scans = await resp.json();
+
+    if (!scans.length) {
+      document.getElementById('recentSection').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('recentGrid').innerHTML = scans.map(s => {
+      const scores = typeof s.scores === 'string' ? JSON.parse(s.scores) : s.scores;
+      const overall = scores?.overall || 0;
+      const color = sc(overall);
+      const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `
+        <div class="recent-card">
+          <div class="recent-domain">${s.domain}</div>
+          <div class="recent-score" style="color:${color}">${overall}</div>
+          <div class="recent-date">${date}</div>
+        </div>
+      `;
+    }).join('');
+  } catch {
+    document.getElementById('recentSection').style.display = 'none';
+  }
+}
+
+loadRecent();
+</script>
+</body>
+</html>
