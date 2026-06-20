@@ -162,6 +162,32 @@
     .recent-grid { grid-template-columns: 1fr; }
     .preview-scores { flex-direction: column; align-items: center; }
   }
+
+  /* Scanning Overlay */
+  .scanning-overlay {
+    display: none; max-width: 600px; margin: 32px auto 0; text-align: center;
+  }
+  .scanning-overlay.show { display: block; }
+  .scanning-inner {
+    background: #0f172a; border: 1px solid #1e293b; border-radius: 16px;
+    padding: 40px 32px;
+  }
+  .scanning-ring { margin-bottom: 16px; }
+  .scanning-step {
+    font-size: 14px; font-weight: 600; color: #6366f1; margin-bottom: 32px;
+    min-height: 20px; transition: opacity 0.3s;
+  }
+  .scanning-quote-wrap {
+    border-top: 1px solid #1e293b; padding-top: 24px; max-width: 440px; margin: 0 auto;
+  }
+  .scanning-quote {
+    font-size: 16px; font-weight: 500; color: #cbd5e1; line-height: 1.6;
+    font-style: italic; min-height: 72px; transition: opacity 0.5s;
+  }
+  .scanning-author {
+    font-size: 11px; color: #475569; margin-top: 12px; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
 </style>
 </head>
 <body>
@@ -177,6 +203,27 @@
   <button class="scan-btn" id="scanBtn" onclick="startScan()">Scan Now</button>
 </div>
 <div class="status" id="status"></div>
+
+<!-- Scanning Loading Experience -->
+<div class="scanning-overlay" id="scanningOverlay">
+  <div class="scanning-inner">
+    <div class="scanning-ring">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#1e293b" stroke-width="4"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#6366f1" stroke-width="4"
+          stroke-dasharray="60 154" stroke-linecap="round"
+          transform="rotate(-90 40 40)">
+          <animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="1.2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+    <div class="scanning-step" id="scanStep">Connecting to server...</div>
+    <div class="scanning-quote-wrap">
+      <div class="scanning-quote" id="scanQuote"></div>
+      <div class="scanning-author">— Sun Tzu, adapted</div>
+    </div>
+  </div>
+</div>
 
 <!-- Gated Preview -->
 <div class="preview" id="preview">
@@ -203,6 +250,15 @@
         <p id="overrideMsg"></p>
         <button class="override-btn" onclick="unlockReport(true)">I have permission to view this report</button>
       </div>
+
+      <div class="override-prompt" id="teamPrompt">
+        <p style="color:#6366f1">WinTech team member detected. Enter your team password.</p>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input type="password" class="email-input" id="teamPassInput" placeholder="Team password" onkeydown="if(event.key==='Enter') submitTeamPass()">
+          <button class="email-btn" style="background:#6366f1" onclick="submitTeamPass()">Verify</button>
+        </div>
+        <div class="email-status" id="teamStatus"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -220,8 +276,42 @@
 <script>
 let currentScanId = null;
 let currentDomain = null;
+let quoteInterval = null;
 
-// Color helper
+// Sun Tzu quotes adapted for AI, websites, and the internet
+const QUOTES = [
+  "Every battle is won before it is ever fought. Every website visitor decides before they ever click.",
+  "If you know the enemy and know yourself, you need not fear the result. If you know your website and your competitor's, you need not fear the search results.",
+  "The supreme art of war is to subdue the enemy without fighting. The supreme art of marketing is to convert the visitor without selling.",
+  "In the midst of chaos, there is also opportunity. In the midst of algorithm changes, there is also advantage.",
+  "Appear weak when you are strong, and strong when you are weak. Your website should never appear weak.",
+  "The whole secret lies in confusing the enemy. The whole failure lies in confusing your visitor.",
+  "Let your plans be dark and impenetrable as night. Let your website be clear and navigable as day.",
+  "Opportunities multiply as they are seized. Rankings multiply as they are earned.",
+  "He who wishes to fight must first count the cost. He who wishes to rank must first fix the foundation.",
+  "To know your enemy, you must become your enemy. To know your customer, you must walk their journey.",
+  "The greatest victory is that which requires no battle. The greatest conversion is that which requires no persuasion.",
+  "Move swift as the wind and closely formed as the forest. Load fast as light and structured as schema.",
+  "All warfare is based on deception. All marketing is based on perception. Make yours accurate.",
+  "When the enemy is relaxed, make them toil. When your competitor is complacent, outwork their website.",
+  "There is no instance of a nation benefiting from prolonged warfare. There is no instance of a business benefiting from a broken website.",
+];
+
+const SCAN_STEPS = [
+  "Connecting to server...",
+  "Fetching HTML content...",
+  "Parsing SEO elements...",
+  "Checking SSL certificate...",
+  "Analyzing security headers...",
+  "Querying Mozilla Observatory...",
+  "Running Google PageSpeed...",
+  "Evaluating schema markup...",
+  "Scoring content quality...",
+  "Calculating revenue impact...",
+  "Generating findings...",
+  "Compiling your report...",
+];
+
 function sc(s) {
   if (s >= 80) return '#22c55e';
   if (s >= 60) return '#f59e0b';
@@ -236,7 +326,6 @@ function grade(s) {
   return 'F';
 }
 
-// Enter key to scan
 document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') startScan();
 });
@@ -244,7 +333,52 @@ document.getElementById('emailInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') unlockReport();
 });
 
-// Start scan
+// ===== SCANNING =====
+function showScanningOverlay() {
+  const overlay = document.getElementById('scanningOverlay');
+  overlay.classList.add('show');
+  document.getElementById('preview').classList.remove('show');
+
+  // Start quote rotation
+  let quoteIdx = Math.floor(Math.random() * QUOTES.length);
+  document.getElementById('scanQuote').textContent = QUOTES[quoteIdx];
+  quoteInterval = setInterval(() => {
+    const el = document.getElementById('scanQuote');
+    el.style.opacity = '0';
+    setTimeout(() => {
+      quoteIdx = (quoteIdx + 1) % QUOTES.length;
+      el.textContent = QUOTES[quoteIdx];
+      el.style.opacity = '1';
+    }, 400);
+  }, 4500);
+
+  // Scan step progression
+  let stepIdx = 0;
+  const stepEl = document.getElementById('scanStep');
+  const stepInterval = setInterval(() => {
+    stepIdx++;
+    if (stepIdx < SCAN_STEPS.length) {
+      stepEl.style.opacity = '0';
+      setTimeout(() => {
+        stepEl.textContent = SCAN_STEPS[stepIdx];
+        stepEl.style.opacity = '1';
+      }, 200);
+    } else {
+      clearInterval(stepInterval);
+    }
+  }, 2500);
+
+  // Store interval refs for cleanup
+  overlay._stepInterval = stepInterval;
+}
+
+function hideScanningOverlay() {
+  const overlay = document.getElementById('scanningOverlay');
+  overlay.classList.remove('show');
+  if (quoteInterval) { clearInterval(quoteInterval); quoteInterval = null; }
+  if (overlay._stepInterval) { clearInterval(overlay._stepInterval); }
+}
+
 async function startScan() {
   const url = document.getElementById('urlInput').value.trim();
   if (!url) return;
@@ -254,8 +388,9 @@ async function startScan() {
   btn.disabled = true;
   btn.textContent = 'Scanning...';
   status.className = 'status';
-  status.innerHTML = '<span class="spinner"></span> Analyzing website... this takes 15-30 seconds';
-  document.getElementById('preview').classList.remove('show');
+  status.textContent = '';
+
+  showScanningOverlay();
 
   try {
     const resp = await fetch('/api/scan', {
@@ -264,6 +399,8 @@ async function startScan() {
       body: JSON.stringify({ url }),
     });
     const data = await resp.json();
+
+    hideScanningOverlay();
 
     if (data.error) {
       status.className = 'status error';
@@ -279,6 +416,7 @@ async function startScan() {
     showPreview(data);
 
   } catch (err) {
+    hideScanningOverlay();
     status.className = 'status error';
     status.textContent = 'Scan failed. Please try again.';
   }
@@ -287,7 +425,7 @@ async function startScan() {
   btn.textContent = 'Scan Now';
 }
 
-// Show gated preview
+// ===== GATED PREVIEW =====
 function showPreview(data) {
   const scores = data.scores;
   document.getElementById('previewDomain').textContent = data.domain;
@@ -295,10 +433,9 @@ function showPreview(data) {
 
   const overall = scores.overall;
   const color = sc(overall);
-
-  // Score ring
   const r = 76, circ = 2 * Math.PI * r;
   const offset = circ - (overall / 100) * circ;
+
   document.getElementById('previewRing').innerHTML = `
     <svg width="160" height="160">
       <circle cx="80" cy="80" r="${r}" fill="none" stroke="#1e293b" stroke-width="12"/>
@@ -311,7 +448,6 @@ function showPreview(data) {
     </svg>
   `;
 
-  // Category bars
   const cats = scores.categories;
   let barsHtml = '';
   for (const [key, cat] of Object.entries(cats)) {
@@ -330,16 +466,17 @@ function showPreview(data) {
   }
   document.getElementById('previewBars').innerHTML = barsHtml;
 
-  // Reset email form
+  // Reset forms
   document.getElementById('emailInput').value = '';
   document.getElementById('emailStatus').textContent = '';
   document.getElementById('overridePrompt').classList.remove('show');
+  document.getElementById('teamPrompt').classList.remove('show');
 
   document.getElementById('preview').classList.add('show');
   document.getElementById('preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Unlock report with email
+// ===== EMAIL UNLOCK =====
 async function unlockReport(override = false) {
   const email = document.getElementById('emailInput').value.trim();
   if (!email || !email.includes('@')) {
@@ -365,10 +502,21 @@ async function unlockReport(override = false) {
       return;
     }
 
+    if (data.status === 'team_auth') {
+      document.getElementById('emailStatus').textContent = '';
+      document.getElementById('overridePrompt').classList.remove('show');
+      document.getElementById('teamPrompt').classList.add('show');
+      document.getElementById('teamPassInput').focus();
+    }
+
+    if (data.status === 'team_auth_failed') {
+      document.getElementById('teamStatus').className = 'email-status error';
+      document.getElementById('teamStatus').textContent = 'Incorrect team password.';
+    }
+
     if (data.status === 'domain_mismatch') {
       document.getElementById('emailStatus').className = 'email-status error';
       document.getElementById('emailStatus').textContent = data.message;
-
       if (data.canOverride) {
         document.getElementById('overrideMsg').textContent = data.message + ' You can override this once if you have permission to access this report.';
         document.getElementById('overridePrompt').classList.add('show');
@@ -384,35 +532,53 @@ async function unlockReport(override = false) {
   btn.textContent = 'Get Report';
 }
 
-// Load recent scans
+// ===== TEAM PASSWORD =====
+async function submitTeamPass() {
+  const email = document.getElementById('emailInput').value.trim();
+  const teamPassword = document.getElementById('teamPassInput').value;
+  if (!teamPassword) return;
+
+  try {
+    const resp = await fetch('/api/unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, scanId: currentScanId, teamPassword }),
+    });
+    const data = await resp.json();
+
+    if (data.status === 'unlocked') {
+      window.location.href = data.reportUrl;
+      return;
+    }
+    if (data.status === 'team_auth_failed') {
+      document.getElementById('teamStatus').className = 'email-status error';
+      document.getElementById('teamStatus').textContent = 'Incorrect team password.';
+    }
+  } catch (err) {
+    document.getElementById('teamStatus').className = 'email-status error';
+    document.getElementById('teamStatus').textContent = 'Something went wrong.';
+  }
+}
+
+// ===== RECENT SCANS =====
 async function loadRecent() {
   try {
     const resp = await fetch('/api/recent');
     const scans = await resp.json();
-
-    if (!scans.length) {
-      document.getElementById('recentSection').style.display = 'none';
-      return;
-    }
-
+    if (!scans.length) { document.getElementById('recentSection').style.display = 'none'; return; }
     document.getElementById('recentGrid').innerHTML = scans.map(s => {
       const scores = typeof s.scores === 'string' ? JSON.parse(s.scores) : s.scores;
       const overall = scores?.overall || 0;
       const color = sc(overall);
       const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `
-        <div class="recent-card">
-          <div class="recent-domain">${s.domain}</div>
-          <div class="recent-score" style="color:${color}">${overall}</div>
-          <div class="recent-date">${date}</div>
-        </div>
-      `;
+      return `<div class="recent-card">
+        <div class="recent-domain">${s.domain}</div>
+        <div class="recent-score" style="color:${color}">${overall}</div>
+        <div class="recent-date">${date}</div>
+      </div>`;
     }).join('');
-  } catch {
-    document.getElementById('recentSection').style.display = 'none';
-  }
+  } catch { document.getElementById('recentSection').style.display = 'none'; }
 }
-
 loadRecent();
 </script>
 </body>

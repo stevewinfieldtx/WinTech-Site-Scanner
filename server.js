@@ -99,7 +99,7 @@ app.post('/api/scan', async (req, res) => {
 // ============================================================
 
 app.post('/api/unlock', async (req, res) => {
-  const { email, scanId, override } = req.body;
+  const { email, scanId, override, teamPassword } = req.body;
   if (!email || !scanId) return res.status(400).json({ error: 'Email and scanId required' });
 
   try {
@@ -110,8 +110,28 @@ app.post('/api/unlock', async (req, res) => {
     const siteResult = await db.pool.query('SELECT domain FROM sites WHERE id = $1', [scan.site_id]);
     const scannedDomain = siteResult.rows[0]?.domain || '';
 
-    // Validate email domain matches scanned domain
     const emailDomain = email.split('@')[1]?.toLowerCase() || '';
+
+    // WinTech team bypass: wintechpartners.com emails get access to any report with team password
+    if (emailDomain === 'wintechpartners.com') {
+      if (!teamPassword) {
+        return res.json({
+          status: 'team_auth',
+          message: 'WinTech team member detected. Enter your team password.',
+        });
+      }
+      if (teamPassword !== process.env.TEAM_PASSWORD) {
+        return res.json({
+          status: 'team_auth_failed',
+          message: 'Incorrect team password.',
+        });
+      }
+      // Team auth passed — grant access
+      await db.saveLead(email, scannedDomain, scan.site_id, false);
+      return res.json({ status: 'unlocked', reportUrl: `/report/${scan.id}` });
+    }
+
+    // Normal flow: validate email domain matches scanned domain
     const freeEmailDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com'];
     const isFreeEmail = freeEmailDomains.includes(emailDomain);
     const domainMatch = emailDomain === scannedDomain || scannedDomain.endsWith('.' + emailDomain) || emailDomain.endsWith('.' + scannedDomain);
