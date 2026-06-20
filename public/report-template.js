@@ -241,7 +241,7 @@
       <span style="font-size:10px;color:#475569;font-family:'JetBrains Mono',monospace">${scanDate}</span>
     </div>
     <h1 style="font-size:36px;font-weight:900;margin:8px 0 4px;letter-spacing:-1.5px;background:linear-gradient(135deg,#e2e8f0,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${domain}</h1>
-    <p style="font-size:13px;color:#64748b">${data.tech?.cms ? data.tech.cms : 'No CMS detected'} • ${data.tech?.hosting || 'Unknown hosting'}</p>
+    <p style="font-size:13px;color:#64748b">${data.tech?.cms && data.tech.cms !== 'Unknown' ? data.tech.cms : 'No CMS detected'} • ${data.tech?.hosting || 'Unknown hosting'}</p>
   </div></div>
 
   <div class="tabs"><div class="tabs-in" id="tabBar">

@@ -256,6 +256,10 @@ let currentScanId = null;
 let currentDomain = null;
 let quoteInterval = null;
 
+// Private force-rescan key. Visit the site as ?fk=YOUR_KEY to enable fresh scans for yourself only.
+// Must match FORCE_RESCAN_KEY on the server; without it, the server ignores force requests.
+const FORCE_KEY = new URLSearchParams(window.location.search).get('fk') || '';
+
 // Sun Tzu quotes adapted for AI, websites, and the internet
 const QUOTES = [
   "Every battle is won before it is ever fought. Every website visitor decides before they ever click.",
@@ -374,7 +378,7 @@ async function startScan(forceRescan = false) {
     const resp = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, force: forceRescan }),
+      body: JSON.stringify({ url, force: forceRescan || !!FORCE_KEY, forceKey: FORCE_KEY }),
     });
     const data = await resp.json();
 
@@ -393,7 +397,8 @@ async function startScan(forceRescan = false) {
     showPreview(data);
 
     if (data.status === 'cached') {
-      status.innerHTML = 'Showing cached results from ' + new Date(data.scanDate).toLocaleDateString() + '. <a href="#" onclick="startScan(true);return false" style="color:#6366f1;font-weight:600">Force fresh scan →</a>';
+      const forceLink = FORCE_KEY ? ' <a href="#" onclick="startScan(true);return false" style="color:#6366f1;font-weight:600">Force fresh scan →</a>' : '';
+      status.innerHTML = 'Showing cached results from ' + new Date(data.scanDate).toLocaleDateString() + '.' + forceLink;
     } else {
       status.textContent = '';
     }

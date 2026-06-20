@@ -81,14 +81,18 @@ function safeEqual(a, b) {
 
 // Step 1: Quick preview scan (no email required, returns gated overview)
 app.post('/api/scan', async (req, res) => {
-  const { url, force } = req.body;
+  const { url, force, forceKey } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
+
+  // A public visitor must not be able to trigger expensive full re-scans. The `force`
+  // flag is only honored when accompanied by the private FORCE_RESCAN_KEY (set in env).
+  const allowForce = !!force && !!process.env.FORCE_RESCAN_KEY && safeEqual(forceKey || '', process.env.FORCE_RESCAN_KEY);
 
   try {
     const domain = new URL(url.startsWith('http') ? url : 'https://' + url).hostname;
 
-    // Check if we have a recent scan (skip if force=true)
-    if (!force) {
+    // Check if we have a recent scan (skip only when an authorized force is requested)
+    if (!allowForce) {
       const existingSite = await db.getSiteByDomain(domain);
     if (existingSite) {
       const latestScan = await db.getLatestScan(existingSite.id);
