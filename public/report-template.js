@@ -209,6 +209,65 @@
     chk('security.txt', sec.securityTxt?.exists ? 'pass' : 'fail', sec.securityTxt?.exists ? `Present at ${sec.securityTxt.path}` : 'Missing. RFC 9116 standard for responsible disclosure.'),
   ].join('');
 
+  // Best Practices checks
+  const bpData = data.bestPractices || {};
+  const bpChecks = [
+    chk('HTTPS', bpData.https ? 'pass' : 'fail', bpData.https ? 'Served over a secure connection' : 'Not served over HTTPS — browsers show "Not secure"'),
+    chk('Character Encoding', bpData.charset ? 'pass' : 'fail', bpData.charset ? 'Declared (<meta charset>)' : 'No character encoding declared'),
+    chk('Standards Doctype', bpData.doctype ? 'pass' : 'warn', bpData.doctype ? 'HTML5 <!DOCTYPE html>' : 'No HTML5 doctype found'),
+    chk('Mobile Viewport', seo.viewport ? 'pass' : 'fail', seo.viewport ? 'Set' : 'Missing'),
+    chk('Favicon', bpData.favicons > 0 ? 'pass' : 'warn', bpData.favicons > 0 ? 'Present' : 'No favicon found'),
+    chk('Lighthouse Best Practices', psScores['best-practices'] !== undefined ? (psScores['best-practices'] >= 90 ? 'pass' : psScores['best-practices'] >= 50 ? 'warn' : 'fail') : 'warn', psScores['best-practices'] !== undefined ? `Score: ${psScores['best-practices']}/100` : 'Not available this scan'),
+  ].join('');
+
+  // Accessibility checks
+  const accData = data.accessibility || {};
+  const labeledPct = accData.formFields ? Math.round((accData.labeledFields / accData.formFields) * 100) : null;
+  const a11yChecks = [
+    chk('Image Alt Text', accData.altPct === null || accData.altPct >= 90 ? 'pass' : accData.altPct >= 50 ? 'warn' : 'fail', accData.altPct === null ? 'No images to caption' : `${accData.altPct}% of images have alt text`),
+    chk('Form Field Labels', !accData.formFields ? 'pass' : labeledPct >= 90 ? 'pass' : labeledPct >= 50 ? 'warn' : 'fail', !accData.formFields ? 'No form fields on page' : `${accData.labeledFields} of ${accData.formFields} fields labeled (${labeledPct}%)`),
+    chk('Semantic Landmarks', accData.landmarks > 0 ? 'pass' : 'fail', accData.landmarks > 0 ? `${accData.landmarks} landmark region(s)` : 'No <main>, <nav>, <header>, <footer> or ARIA roles'),
+    chk('HTML Lang', seo.htmlLang ? 'pass' : 'fail', seo.htmlLang ? `lang="${seo.htmlLang}"` : 'Missing'),
+    chk('Heading Structure', seo.headingHierarchy ? 'pass' : 'fail', seo.headingHierarchy ? 'Logical heading order' : (seo.h1?.count ? 'Headings skip levels' : 'No H1 to anchor structure')),
+    chk('Descriptive Links', !accData.genericLinkText ? 'pass' : 'warn', !accData.genericLinkText ? 'No vague "click here" links' : `${accData.genericLinkText} non-descriptive link(s)`),
+    chk('Lighthouse Accessibility', psScores.accessibility !== undefined ? (psScores.accessibility >= 90 ? 'pass' : psScores.accessibility >= 50 ? 'warn' : 'fail') : 'warn', psScores.accessibility !== undefined ? `Score: ${psScores.accessibility}/100` : 'Not available this scan'),
+  ].join('');
+
+  // Internationalization checks
+  const intlData = data.i18n || {};
+  const i18nChecks = [
+    chk('Language Declared', intlData.htmlLang ? 'pass' : 'fail', intlData.htmlLang ? `lang="${intlData.htmlLang}"` : 'No <html lang> attribute'),
+    chk('Character Encoding', intlData.charset ? 'pass' : 'warn', intlData.charset ? String(intlData.charset).toUpperCase() : 'Not declared'),
+    chk('hreflang Alternates', intlData.hreflang ? 'pass' : 'warn', intlData.hreflang ? `${intlData.hreflangCount} locale alternate(s)` : 'None — single-language only'),
+    chk('Text Direction', 'pass', intlData.dir ? `dir="${intlData.dir}"` : 'Default (left-to-right)'),
+  ].join('');
+
+  // Analytics & Measurability checks
+  const anData = data.analytics || {};
+  const anChecks = [
+    chk('Analytics Installed', anData.hasAny ? 'pass' : 'fail', anData.hasAny ? `${anData.count} tool(s): ${(anData.tools || []).join(', ')}` : 'No analytics detected — you cannot measure conversions'),
+    chk('Tag Manager', anData.hasTagManager ? 'pass' : 'warn', anData.hasTagManager ? 'Google Tag Manager present' : 'No tag manager'),
+    chk('Conversion / Ad Pixel', anData.hasAdPixel ? 'pass' : 'warn', anData.hasAdPixel ? 'Ad conversion pixel present' : 'No Meta/LinkedIn/Google Ads pixel'),
+    chk('Behavior / Heatmaps', anData.hasHeatmap ? 'pass' : 'warn', anData.hasHeatmap ? 'Product analytics / heatmap present' : 'No heatmap or product analytics'),
+  ].join('');
+
+  // Privacy & Compliance checks
+  const pvData = data.privacy || {};
+  const pvChecks = [
+    chk('Privacy Policy', pvData.hasPrivacyPolicy ? 'pass' : 'fail', pvData.hasPrivacyPolicy ? 'Linked' : 'No privacy policy link found'),
+    chk('Terms of Service', pvData.hasTerms ? 'pass' : 'warn', pvData.hasTerms ? 'Linked' : 'No terms/legal link found'),
+    chk('Cookie Consent', pvData.cookieConsent ? 'pass' : (anData.hasAny ? 'fail' : 'warn'), pvData.cookieConsent ? 'Consent mechanism detected' : (anData.hasAny ? 'Trackers load with no consent banner (GDPR/CCPA risk)' : 'No consent banner (no trackers detected)')),
+  ].join('');
+
+  // Trust & Conversion checks
+  const trustChecks = [
+    chk('Lead Capture Form', trust.forms > 0 ? 'pass' : 'fail', trust.forms > 0 ? `${trust.forms} form(s)` : 'Nothing to capture visitor interest'),
+    chk('Phone Number', trust.hasPhone ? 'pass' : 'warn', trust.hasPhone ? 'Visible' : 'No phone number found'),
+    chk('Email Address', trust.hasEmail ? 'pass' : 'warn', trust.hasEmail ? 'Visible' : 'No email found'),
+    chk('Social Profiles', trust.socialLinks > 0 ? 'pass' : 'warn', trust.socialLinks > 0 ? `${trust.socialLinks} link(s)` : 'No social profile links'),
+    chk('Privacy Policy', trust.hasPrivacyPolicy ? 'pass' : 'warn', trust.hasPrivacyPolicy ? 'Linked' : 'Missing'),
+  ].join('');
+
   // Build full page
   document.body.innerHTML = `
   <style>
@@ -258,7 +317,9 @@
     <button class="tab" data-tab="findings">Findings</button>
     <button class="tab" data-tab="technical">Technical</button>
     <button class="tab" data-tab="seo">SEO & AEO</button>
-    <button class="tab" data-tab="security">Security</button>
+    <button class="tab" data-tab="accessibility">Accessibility</button>
+    <button class="tab" data-tab="security">Security & Privacy</button>
+    <button class="tab" data-tab="growth">Conversion</button>
     <button class="tab" data-tab="revenue">💰 Revenue Impact</button>
   </div></div>
 
@@ -316,6 +377,8 @@
         { label: 'Best Practices', value: psScores['best-practices'] || 0, color: sc(psScores['best-practices'] || 0) },
         { label: 'SEO', value: psScores.seo || 0, color: sc(psScores.seo || 0) },
       ])}` : ''}
+      <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px">Best Practices &amp; Tech Hygiene</h3>
+      <div class="cl">${bpChecks}</div>
       ${technicalInsight}
     </div>
 
@@ -331,8 +394,25 @@
           <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">AEO / AI Readiness</h3>
           <div class="cl">${aeoChecks}</div>
         </div>
+        <div style="flex:1 1 300px">
+          <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">🌐 Internationalization</h3>
+          <div class="cl">${i18nChecks}</div>
+        </div>
       </div>
       ${seoInsight}
+    </div>
+
+    <!-- ACCESSIBILITY -->
+    <div class="pnl" id="p-accessibility">
+      <div class="sec"><h2>Accessibility</h2><p>WCAG signals and ADA readiness</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+        ${stat('Accessibility', (cats.accessibility?.score ?? '?') + '/100', sc(cats.accessibility?.score || 0), 'Weighted into overall')}
+        ${stat('Fields Labeled', accData.formFields ? `${accData.labeledFields}/${accData.formFields}` : 'n/a', (!accData.formFields || accData.labeledFields === accData.formFields) ? '#22c55e' : '#ef4444', 'Screen-reader critical')}
+        ${stat('Landmarks', accData.landmarks ?? 0, accData.landmarks > 0 ? '#22c55e' : '#ef4444', 'Navigation structure')}
+      </div>
+      <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">Accessibility Checklist</h3>
+      <div class="cl">${a11yChecks}</div>
+      ${insight(`<p><strong>Accessibility is both an inclusion and a legal issue.</strong> ADA-related web lawsuits have risen sharply, and most target exactly these gaps — unlabeled form fields, missing landmarks, and low contrast. The same fixes that reduce that exposure also improve usability and SEO for everyone.</p>`)}
     </div>
 
     <!-- SECURITY -->
@@ -345,7 +425,25 @@
       </div>
       <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">Security Headers</h3>
       <div class="cl">${secChecks}</div>
+      <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px">🔏 Privacy & Compliance</h3>
+      <div class="cl">${pvChecks}</div>
       ${securityInsight}
+    </div>
+
+    <!-- CONVERSION / GROWTH -->
+    <div class="pnl" id="p-growth">
+      <div class="sec"><h2>Conversion &amp; Analytics</h2><p>Lead capture, trust signals, and whether you can measure any of it</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:24px">
+        <div style="flex:1 1 300px">
+          <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">🤝 Trust &amp; Conversion</h3>
+          <div class="cl">${trustChecks}</div>
+        </div>
+        <div style="flex:1 1 300px">
+          <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">📊 Analytics &amp; Measurability</h3>
+          <div class="cl">${anChecks}</div>
+        </div>
+      </div>
+      ${insight(`<p><strong>${anData.hasAny ? 'You can measure — now optimize.' : 'Right now, you are flying blind.'}</strong> ${anData.hasAny ? 'Analytics is installed, so every fix in this report can be measured against real visitor behavior.' : 'No analytics was detected. Until you can see traffic and conversions, you cannot tell which changes are working — installing GA4 or a tag manager is the prerequisite for everything else.'} ${trust.forms > 0 ? '' : 'And with no lead-capture form, even the visitors you do attract have no way to raise their hand.'}</p>`)}
     </div>
 
     <!-- REVENUE IMPACT -->

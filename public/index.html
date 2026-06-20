@@ -249,6 +249,7 @@
 
 <div class="footer">
   <p>WinTech Site Scanner &nbsp;•&nbsp; Powered by <a href="https://wintechpartners.com">WinTech Partners</a></p>
+  <p id="compareLink" style="margin-top:8px"></p>
 </div>
 
 <script>
@@ -259,6 +260,14 @@ let quoteInterval = null;
 // Private force-rescan key. Visit the site as ?fk=YOUR_KEY to enable fresh scans for yourself only.
 // Must match FORCE_RESCAN_KEY on the server; without it, the server ignores force requests.
 const FORCE_KEY = new URLSearchParams(window.location.search).get('fk') || '';
+
+// Surface the private competitor-comparison tool only when you have the key.
+if (FORCE_KEY) {
+  window.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('compareLink');
+    if (el) el.innerHTML = '<a href="/compare?fk=' + encodeURIComponent(FORCE_KEY) + '" style="color:#6366f1;font-weight:600">Compare against competitors →</a>';
+  });
+}
 
 // Sun Tzu quotes adapted for AI, websites, and the internet
 const QUOTES = [

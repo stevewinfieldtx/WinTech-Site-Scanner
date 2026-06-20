@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>WinTech — Competitive Website Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#020617; color:#e2e8f0; font-family:'Inter',system-ui,sans-serif; min-height:100vh; }
+  .mono { font-family:'JetBrains Mono',monospace; }
+  a { color:#6366f1; text-decoration:none; }
+
+  .wrap { max-width:980px; margin:0 auto; padding:0 24px; }
+  .hero { text-align:center; padding:56px 24px 24px; }
+  .eyebrow { font-size:11px; font-weight:700; letter-spacing:2px; color:#6366f1; text-transform:uppercase; margin-bottom:12px; }
+  .hero h1 { font-size:38px; font-weight:900; letter-spacing:-1.5px; line-height:1.1; margin-bottom:14px;
+    background:linear-gradient(135deg,#e2e8f0,#6366f1); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hero p { font-size:16px; color:#94a3b8; max-width:560px; margin:0 auto; line-height:1.6; }
+
+  .form { max-width:640px; margin:32px auto 0; }
+  .field { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .field .tag { width:96px; flex-shrink:0; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; text-align:right; }
+  .field .tag.you { color:#6366f1; }
+  .inp { flex:1; padding:13px 16px; font-size:15px; border-radius:10px; border:2px solid #1e293b; background:#0f172a; color:#e2e8f0; font-family:'JetBrains Mono',monospace; outline:none; transition:border-color .2s; }
+  .inp:focus { border-color:#6366f1; }
+  .inp::placeholder { color:#475569; }
+  .btn { width:100%; margin-top:14px; padding:15px; font-size:15px; font-weight:700; border-radius:10px; border:none; background:#6366f1; color:#fff; cursor:pointer; transition:background .2s; }
+  .btn:hover { background:#4f46e5; }
+  .btn:disabled { background:#334155; cursor:not-allowed; }
+  .status { text-align:center; font-size:13px; color:#64748b; min-height:20px; margin-top:14px; }
+  .status.error { color:#ef4444; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid #6366f133; border-top-color:#6366f1; border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-right:8px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .results { display:none; margin:36px auto 80px; }
+  .results.show { display:block; }
+  .sec-title { font-size:22px; font-weight:800; letter-spacing:-0.4px; margin:40px 0 4px; }
+  .sec-sub { font-size:13px; color:#64748b; margin-bottom:18px; }
+
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+  .card { background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:20px; text-align:center; position:relative; }
+  .card.you { border-color:#6366f1; box-shadow:0 0 0 1px #6366f155; }
+  .card .rank { position:absolute; top:10px; left:12px; font-size:11px; font-weight:800; color:#475569; font-family:'JetBrains Mono',monospace; }
+  .card .youbadge { position:absolute; top:10px; right:12px; font-size:9px; font-weight:800; letter-spacing:1px; color:#6366f1; background:#6366f122; padding:2px 7px; border-radius:5px; }
+  .card .dom { font-size:13px; font-weight:700; color:#e2e8f0; margin-bottom:10px; word-break:break-all; }
+  .card .score { font-size:42px; font-weight:900; font-family:'JetBrains Mono',monospace; line-height:1; }
+  .card .grade { font-size:14px; font-weight:700; margin-top:2px; }
+  .card .sub { font-size:11px; color:#64748b; margin-top:8px; }
+
+  .insight { margin-top:24px; background:linear-gradient(135deg,#1e1b4b,#0f172a); border:1px solid #4f46e5; border-radius:12px; padding:22px 24px; font-size:14px; color:#cbd5e1; line-height:1.7; }
+  .insight strong { color:#a5b4fc; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:16px; margin:6px 0 20px; }
+  .legend .item { display:flex; align-items:center; gap:7px; font-size:12px; color:#94a3b8; }
+  .legend .dot { width:11px; height:11px; border-radius:3px; }
+
+  .dim { background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:16px 18px; margin-bottom:12px; }
+  .dim-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:6px; }
+  .dim-name { font-size:14px; font-weight:700; color:#e2e8f0; }
+  .dim-leader { font-size:11px; font-weight:600; color:#64748b; }
+  .dim-leader b { color:#22c55e; }
+  .track { position:relative; }
+  .target { position:absolute; top:-2px; bottom:-2px; width:0; border-left:2px dashed #64748b88; }
+  .target span { position:absolute; top:-16px; left:-30px; font-size:9px; color:#64748b; white-space:nowrap; }
+  .brow { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .brow:last-child { margin-bottom:0; }
+  .btrack { flex:1; height:18px; background:#1e293b; border-radius:5px; overflow:hidden; position:relative; }
+  .bfill { height:100%; border-radius:5px; transition:width .7s cubic-bezier(.2,.7,.2,1); }
+  .bval { width:64px; flex-shrink:0; font-size:12px; font-weight:700; font-family:'JetBrains Mono',monospace; text-align:right; }
+  .bdom { width:120px; flex-shrink:0; font-size:11px; color:#94a3b8; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .footer { text-align:center; padding:30px 24px; border-top:1px solid #1e293b; }
+  .footer p { font-size:11px; color:#334155; }
+
+  @media (max-width:640px) {
+    .hero h1 { font-size:28px; }
+    .field .tag { width:64px; font-size:10px; }
+    .bdom { width:74px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="eyebrow">WinTech Competitive Intelligence</div>
+  <h1>See exactly how you stack up against the competition</h1>
+  <p>Scan your site head-to-head against up to three competitors across all 11 dimensions. The dashed line on each chart is the best-in-class target.</p>
+</div>
+
+<div class="wrap">
+  <div class="form" id="form">
+    <div class="field"><span class="tag you">Your site</span><input class="inp" id="site0" placeholder="yoursite.com" autocomplete="off" autofocus></div>
+    <div class="field"><span class="tag">Rival 1</span><input class="inp" id="site1" placeholder="competitor-one.com" autocomplete="off"></div>
+    <div class="field"><span class="tag">Rival 2</span><input class="inp" id="site2" placeholder="competitor-two.com (optional)" autocomplete="off"></div>
+    <div class="field"><span class="tag">Rival 3</span><input class="inp" id="site3" placeholder="competitor-three.com (optional)" autocomplete="off"></div>
+    <button class="btn" id="go" onclick="runCompare()">Compare</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="sec-title">Overall Health Score</div>
+    <div class="sec-sub" id="overallSub">Higher is better. Your site is highlighted.</div>
+    <div class="cards" id="cards"></div>
+    <div class="insight" id="insight"></div>
+
+    <div class="sec-title">Dimension by Dimension</div>
+    <div class="sec-sub">Each bar is a site's score out of 100. The dashed line marks the best-in-class target (90).</div>
+    <div class="legend" id="legend"></div>
+    <div id="dims"></div>
+  </div>
+</div>
+
+<div class="footer"><p>WinTech Site Scanner &nbsp;•&nbsp; Competitive Intelligence</p></div>
+
+<script>
+const FORCE_KEY = new URLSearchParams(location.search).get('fk') || '';
+const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ec4899'];
+const TARGET = 90; // best-in-class threshold
+
+function sc(s){ if(s>=80) return '#22c55e'; if(s>=60) return '#f59e0b'; if(s>=40) return '#f97316'; return '#ef4444'; }
+function grade(s){ if(s>=90) return 'A'; if(s>=80) return 'B'; if(s>=60) return 'C'; if(s>=40) return 'D'; return 'F'; }
+
+['site0','site1','site2','site3'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') runCompare(); });
+});
+
+async function runCompare(){
+  const urls = ['site0','site1','site2','site3'].map(id => document.getElementById(id).value.trim()).filter(Boolean);
+  const status = document.getElementById('status');
+  const btn = document.getElementById('go');
+  if(urls.length < 2){ status.className='status error'; status.textContent='Enter your site plus at least one competitor.'; return; }
+  if(!FORCE_KEY){ status.className='status error'; status.innerHTML='Comparison is private. Open this page as <span class="mono">/compare?fk=YOUR_KEY</span>.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Scanning…';
+  status.className = 'status';
+  status.innerHTML = '<span class="spinner"></span>Scanning ' + urls.length + ' sites in parallel — this can take up to a minute…';
+  document.getElementById('results').classList.remove('show');
+
+  try {
+    const resp = await fetch('/api/compare', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ urls, forceKey: FORCE_KEY }) });
+    const data = await resp.json();
+    if(data.error){ status.className='status error'; status.textContent=data.error; btn.disabled=false; btn.textContent='Compare'; return; }
+    render(data.sites);
+    const failed = data.sites.filter(s => !s.ok);
+    status.className = 'status';
+    status.innerHTML = failed.length ? ('Could not scan: ' + failed.map(f=>f.url).join(', ')) : '';
+  } catch(err){
+    status.className='status error'; status.textContent='Comparison failed. Please try again.';
+  }
+  btn.disabled = false; btn.textContent = 'Compare';
+}
+
+function render(sites){
+  const ok = sites.filter(s => s.ok && s.scores);
+  if(ok.length < 2){ document.getElementById('status').className='status error';
+    document.getElementById('status').textContent='Need at least two sites scanned successfully to compare.'; return; }
+
+  // assign a stable color index by original order (site0 = you)
+  ok.forEach((s,i) => { s.color = COLORS[i % COLORS.length]; s.isYou = (i===0); });
+
+  // ---- overall cards (ranked) ----
+  const ranked = [...ok].sort((a,b) => b.scores.overall - a.scores.overall);
+  const leader = ranked[0];
+  const cards = ranked.map(s => {
+    const o = s.scores.overall, col = sc(o), rank = ranked.indexOf(s)+1;
+    const gap = s === leader ? '' : ('−' + (leader.scores.overall - o) + ' vs leader');
+    return `<div class="card ${s.isYou?'you':''}">
+      <span class="rank">#${rank}</span>${s.isYou?'<span class="youbadge">YOU</span>':''}
+      <div class="dom">${s.domain}</div>
+      <div class="score" style="color:${col}">${o}</div>
+      <div class="grade" style="color:${col}">${grade(o)}</div>
+      <div class="sub">${s===leader?'Leads the field':gap}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('cards').innerHTML = cards;
+
+  // ---- legend ----
+  document.getElementById('legend').innerHTML = ok.map(s =>
+    `<div class="item"><span class="dot" style="background:${s.color}"></span>${s.domain}${s.isYou?' (you)':''}</div>`).join('');
+
+  // ---- per-dimension ----
+  const dimKeys = Object.keys(ok[0].scores.categories);
+  let leads=0, trails=0, biggest=null;
+  const you = ok[0];
+  const dimsHtml = dimKeys.map(key => {
+    const cat = you.scores.categories[key];
+    let best = -1, bestSite = null;
+    ok.forEach(s => { const v = s.scores.categories[key]?.score ?? 0; if(v > best){ best=v; bestSite=s; } });
+    // you vs best competitor
+    const competitors = ok.filter(s => !s.isYou);
+    const bestComp = competitors.reduce((m,s)=> (s.scores.categories[key].score > (m?.scores.categories[key].score ?? -1) ? s : m), null);
+    const youScore = you.scores.categories[key].score;
+    const compBest = bestComp ? bestComp.scores.categories[key].score : 0;
+    if(youScore >= compBest) leads++; else { trails++; const g = compBest - youScore; if(!biggest || g > biggest.gap) biggest = { name: cat.name, gap: g, you: youScore, comp: compBest, rival: bestComp.domain }; }
+
+    const rows = ok.map(s => {
+      const v = s.scores.categories[key].score;
+      const isLead = (s === bestSite);
+      return `<div class="brow">
+        <span class="bdom" title="${s.domain}">${s.domain}</span>
+        <div class="btrack"><div class="bfill" style="width:${v}%;background:${s.color};opacity:${isLead?1:0.82}"></div></div>
+        <span class="bval" style="color:${s.color}">${v}${isLead?' ▲':''}</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="dim">
+      <div class="dim-head">
+        <span class="dim-name">${cat.icon} ${cat.name}</span>
+        <span class="dim-leader">Leader: <b>${bestSite.isYou?'You':bestSite.domain}</b> (${best})</span>
+      </div>
+      <div class="track">
+        <div class="target" style="left:${TARGET}%"><span>target ${TARGET}</span></div>
+        ${rows}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('dims').innerHTML = dimsHtml;
+
+  // ---- insight ----
+  const myRank = ranked.indexOf(you) + 1;
+  let txt = `<strong>You rank #${myRank} of ${ok.length}</strong> overall (${you.scores.overall}/100, grade ${grade(you.scores.overall)}). `;
+  if(myRank === 1) txt += `You lead the field — but there's still headroom to the best-in-class target of ${TARGET}. `;
+  else txt += `The leader, ${leader.domain}, scores ${leader.scores.overall} — a ${leader.scores.overall - you.scores.overall}-point gap. `;
+  txt += `Across the 11 dimensions you lead or tie on <strong>${leads}</strong> and trail on <strong>${trails}</strong>. `;
+  if(biggest) txt += `Your biggest gap is <strong>${biggest.name}</strong>: ${biggest.you} vs ${biggest.comp} (${biggest.rival}) — closing that one moves the overall score the most.`;
+  else txt += `You match or beat every competitor on every dimension.`;
+  document.getElementById('insight').innerHTML = txt;
+
+  document.getElementById('overallSub').textContent = 'Scanned ' + new Date().toLocaleString('en-US', { dateStyle:'medium', timeStyle:'short' }) + ' — your site is highlighted.';
+  const r = document.getElementById('results'); r.classList.add('show'); r.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+</script>
+</body>
+</html>

@@ -271,6 +271,41 @@ app.get('/api/recent', async (req, res) => {
 
 
 // ============================================================
+// API: COMPETITOR COMPARISON  (private — force key required)
+// ============================================================
+
+app.post('/api/compare', async (req, res) => {
+  const { urls, forceKey } = req.body;
+  if (!process.env.FORCE_RESCAN_KEY || !safeEqual(forceKey || '', process.env.FORCE_RESCAN_KEY)) {
+    return res.status(403).json({ error: 'Comparison is a private feature. Open it as /compare?fk=YOUR_KEY.' });
+  }
+  const list = (Array.isArray(urls) ? urls : []).map(u => (u || '').trim()).filter(Boolean).slice(0, 4);
+  if (list.length < 2) return res.status(400).json({ error: 'Enter your site plus at least one competitor.' });
+
+  // Scan every site in parallel; each fullScan is internally parallel and degrades gracefully.
+  const results = await Promise.allSettled(list.map(async (u) => {
+    const scanData = await fullScan(u);
+    try {
+      const site = await db.upsertSite(scanData.domain, scanData.url, scanData.contentHash);
+      const scan = await db.saveScan(site.id, 'full', scanData, scanData.contentHash, scanData.scores, scanData.findings);
+      await db.updateSiteLatestScan(site.id, scan.id, true);
+    } catch (e) { console.error('[COMPARE] persist failed for', u, e.message); }
+    return { url: u, domain: scanData.domain, scores: scanData.scores, findings: scanData.findings.length };
+  }));
+
+  const sites = results.map((r, i) => r.status === 'fulfilled'
+    ? { ok: true, ...r.value }
+    : { ok: false, url: list[i], error: r.reason?.message || 'Scan failed' });
+  res.json({ sites, scanDate: new Date().toISOString() });
+});
+
+// Serve the comparison page at a clean URL
+app.get('/compare', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'compare.html'));
+});
+
+
+// ============================================================
 // ADMIN ROUTES
 // ============================================================
 
