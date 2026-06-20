@@ -4,8 +4,17 @@
 // ============================================================
 
 (function() {
-  const { site, scores, findings, data, scanDate } = window.SCAN_DATA;
+  const { site, scores, findings, data, scanDate, savedAt } = window.SCAN_DATA;
   const domain = site.domain;
+
+  // The browser's "Save as PDF" uses the page title as the default filename. Stamp it with the
+  // save time so each download is a distinct file instead of overwriting the previous one.
+  const reportFileStamp = (() => {
+    const d = savedAt ? new Date(savedAt) : new Date();
+    // e.g. 2026-06-20_144512 (Central time, filename-safe — no colons or spaces)
+    return d.toLocaleString('sv-SE', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(' ', '_').replace(/:/g, '');
+  })();
+  document.title = `WinTech Audit - ${domain} - ${reportFileStamp}`;
   const overall = scores.overall;
   const cats = scores.categories;
   const seo = data.seo || {};

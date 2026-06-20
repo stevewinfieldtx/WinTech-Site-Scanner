@@ -323,7 +323,13 @@ function generateReportHtml(site, scan) {
   const data = typeof scan.scan_data === 'string' ? JSON.parse(scan.scan_data) : scan.scan_data;
   const scores = typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores;
   const findings = typeof scan.findings === 'string' ? JSON.parse(scan.findings) : scan.findings;
-  const scanDate = new Date(scan.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  // Full save timestamp (date + time) so each generated report is distinguishable and carries an "as of" time.
+  // Rendered in Central Time with the zone labeled; change timeZone if your team is elsewhere.
+  const scanDate = new Date(scan.created_at).toLocaleString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+    timeZone: 'America/Chicago', timeZoneName: 'short'
+  });
 
   // Inject scan data into the report template
   return `<!DOCTYPE html>
@@ -336,7 +342,7 @@ function generateReportHtml(site, scan) {
 </head>
 <body>
 <script>
-  window.SCAN_DATA = ${JSON.stringify({ site, scores, findings, data, scanDate })};
+  window.SCAN_DATA = ${JSON.stringify({ site, scores, findings, data, scanDate, savedAt: scan.created_at })};
 </script>
 <div id="loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#020617;color:#e2e8f0;font-family:Inter,sans-serif">
   <div style="text-align:center">
