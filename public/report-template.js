@@ -71,6 +71,14 @@
   const aiFix = findings.filter(f => f.cat === 'SEO' || f.cat === 'AEO' || f.cat === 'Content').length;
   const manualFix = findings.length - aiFix;
 
+  // Variables needed by insights and later sections
+  const sh = sec.headers || {};
+  const obs = sec.observatory || {};
+  const obsGrade = obs.grade || 'N/A';
+  const ssl = sec.ssl || {};
+  const ps = perf.pagespeed || {};
+  const psScores = ps.scores || {};
+
   // Generate dynamic insights per tab
   const lowestCat = Object.values(cats).sort((a,b) => a.score - b.score)[0];
   const highestCat = Object.values(cats).sort((a,b) => b.score - a.score)[0];
@@ -157,6 +165,8 @@
     chk('Image Alt Text', seo.altText?.pct >= 90 ? 'pass' : seo.altText?.pct >= 50 ? 'warn' : 'fail', `${seo.altText?.withAlt || 0} of ${seo.altText?.total || 0} images have alt text (${seo.altText?.pct || 0}%)`),
     chk('Word Count', seo.wordCount >= 800 ? 'pass' : seo.wordCount >= 400 ? 'warn' : 'fail', `${seo.wordCount || 0} words. Target: 800+`),
     chk('Viewport', seo.viewport ? 'pass' : 'fail', seo.viewport ? 'Mobile viewport set' : 'Missing viewport meta'),
+    chk('HTML Lang', seo.htmlLang ? 'pass' : 'fail', seo.htmlLang ? `lang="${seo.htmlLang}"` : 'Missing. Hurts accessibility and internationalization.'),
+    chk('Heading Hierarchy', seo.headingHierarchy !== false ? 'pass' : 'fail', seo.headingHierarchy !== false ? 'Proper H1→H2→H3 nesting' : 'Headings skip levels. Fix nesting order.'),
   ].join('');
 
   // AEO checks
@@ -166,10 +176,10 @@
     chk('FAQ Schema', aeo.faqSchema ? 'pass' : 'fail', aeo.faqSchema ? 'Present' : 'No FAQ markup'),
     chk('HowTo Schema', aeo.howToSchema ? 'pass' : 'fail', aeo.howToSchema ? 'Present' : 'No HowTo markup'),
     chk('Breadcrumb Schema', aeo.breadcrumbs ? 'pass' : 'fail', aeo.breadcrumbs ? 'Present' : 'No breadcrumbs'),
+    chk('llms.txt', data.llmsTxt?.exists ? 'pass' : 'fail', data.llmsTxt?.exists ? `Present (${data.llmsTxt.size} bytes)` : 'Missing. AI engines have no guidance on what to read from your site.'),
   ].join('');
 
   // Security checks
-  const sh = sec.headers || {};
   const secChecks = [
     chk('Strict-Transport-Security', sh.hsts ? 'pass' : 'fail', sh.hsts || 'Not set'),
     chk('Content-Security-Policy', sh.csp ? 'pass' : 'fail', sh.csp ? 'Set' : 'Not set'),
@@ -177,18 +187,8 @@
     chk('X-Content-Type-Options', sh.xContentType ? 'pass' : 'fail', sh.xContentType || 'Not set'),
     chk('Referrer-Policy', sh.referrerPolicy ? 'pass' : 'fail', sh.referrerPolicy || 'Not set'),
     chk('Permissions-Policy', sh.permissionsPolicy ? 'pass' : 'fail', sh.permissionsPolicy ? 'Set' : 'Not set'),
+    chk('security.txt', sec.securityTxt?.exists ? 'pass' : 'fail', sec.securityTxt?.exists ? `Present at ${sec.securityTxt.path}` : 'Missing. RFC 9116 standard for responsible disclosure.'),
   ].join('');
-
-  // Observatory
-  const obs = sec.observatory || {};
-  const obsGrade = obs.grade || 'N/A';
-
-  // SSL
-  const ssl = sec.ssl || {};
-
-  // PageSpeed
-  const ps = perf.pagespeed || {};
-  const psScores = ps.scores || {};
 
   // Build full page
   document.body.innerHTML = `
@@ -303,6 +303,33 @@
         <div style="flex:1 1 300px">
           <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">AEO / AI Readiness</h3>
           <div class="cl">${aeoChecks}</div>
+        </div>
+      </div>
+      <div class="sec"><h2>Social Share Preview</h2><p>How your page appears when shared on LinkedIn, Twitter, and Facebook</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+        <div style="flex:1 1 300px;background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:20px">
+          <div style="font-size:11px;font-weight:700;color:#0a66c2;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">LinkedIn Preview</div>
+          <div style="background:#1e293b;border-radius:8px;overflow:hidden">
+            <div style="height:120px;background:${seo.openGraph?.image ? `url('') #334155` : '#334155'};display:flex;align-items:center;justify-content:center;color:#64748b;font-size:12px">${seo.openGraph?.image ? '🖼 Image set' : '⚠ No og:image — blank preview'}</div>
+            <div style="padding:12px">
+              <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seo.openGraph?.title || seo.title?.value || 'No title'}</div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seo.openGraph?.description || seo.metaDescription?.value || 'No description available'}</div>
+              <div style="font-size:10px;color:#475569">${domain}</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:${seo.openGraph?.exists ? '#22c55e' : '#ef4444'}">${seo.openGraph?.exists ? '✅ Open Graph tags configured' : '❌ No Open Graph tags — shares will look broken'}</div>
+        </div>
+        <div style="flex:1 1 300px;background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:20px">
+          <div style="font-size:11px;font-weight:700;color:#1d9bf0;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">X / Twitter Preview</div>
+          <div style="background:#1e293b;border-radius:8px;overflow:hidden">
+            <div style="height:120px;background:#334155;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:12px">${seo.openGraph?.image ? '🖼 Image set' : '⚠ No card image'}</div>
+            <div style="padding:12px">
+              <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seo.openGraph?.title || seo.title?.value || 'No title'}</div>
+              <div style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seo.openGraph?.description || seo.metaDescription?.value || 'No description'}</div>
+              <div style="font-size:10px;color:#475569;margin-top:4px">${domain}</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:${seo.twitterCards?.exists ? '#22c55e' : '#ef4444'}">${seo.twitterCards?.exists ? '✅ Twitter Card configured' : '❌ No Twitter Card — shares won\'t render properly'}</div>
         </div>
       </div>
       ${seoInsight}
