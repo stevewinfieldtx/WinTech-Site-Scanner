@@ -313,33 +313,6 @@
           <div class="cl">${aeoChecks}</div>
         </div>
       </div>
-      <div class="sec"><h2>Social Share Preview</h2><p>How your page appears when shared on LinkedIn, Twitter, and Facebook</p></div>
-      <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:24px">
-        <div style="flex:1 1 300px;background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:20px">
-          <div style="font-size:11px;font-weight:700;color:#0a66c2;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">LinkedIn Preview</div>
-          <div style="background:#1e293b;border-radius:8px;overflow:hidden">
-            <div style="height:120px;background:${seo.openGraph?.image ? `url('') #334155` : '#334155'};display:flex;align-items:center;justify-content:center;color:#64748b;font-size:12px">${seo.openGraph?.image ? '🖼 Image set' : '⚠ No og:image — blank preview'}</div>
-            <div style="padding:12px">
-              <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seo.openGraph?.title || seo.title?.value || 'No title'}</div>
-              <div style="font-size:11px;color:#64748b;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seo.openGraph?.description || seo.metaDescription?.value || 'No description available'}</div>
-              <div style="font-size:10px;color:#475569">${domain}</div>
-            </div>
-          </div>
-          <div style="margin-top:8px;font-size:11px;color:${seo.openGraph?.exists ? '#22c55e' : '#ef4444'}">${seo.openGraph?.exists ? '✅ Open Graph tags configured' : '❌ No Open Graph tags — shares will look broken'}</div>
-        </div>
-        <div style="flex:1 1 300px;background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:20px">
-          <div style="font-size:11px;font-weight:700;color:#1d9bf0;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">X / Twitter Preview</div>
-          <div style="background:#1e293b;border-radius:8px;overflow:hidden">
-            <div style="height:120px;background:#334155;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:12px">${seo.openGraph?.image ? '🖼 Image set' : '⚠ No card image'}</div>
-            <div style="padding:12px">
-              <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seo.openGraph?.title || seo.title?.value || 'No title'}</div>
-              <div style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seo.openGraph?.description || seo.metaDescription?.value || 'No description'}</div>
-              <div style="font-size:10px;color:#475569;margin-top:4px">${domain}</div>
-            </div>
-          </div>
-          <div style="margin-top:8px;font-size:11px;color:${seo.twitterCards?.exists ? '#22c55e' : '#ef4444'}">${seo.twitterCards?.exists ? '✅ Twitter Card configured' : '❌ No Twitter Card — shares won\'t render properly'}</div>
-        </div>
-      </div>
       ${seoInsight}
     </div>
 
