@@ -13,7 +13,6 @@
     "cheerio": "^1.0.0",
     "node-fetch": "^2.7.0",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.0",
-    "crypto": "^1.0.1"
+    "dotenv": "^16.4.0"
   }
 }

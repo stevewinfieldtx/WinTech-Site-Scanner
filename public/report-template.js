@@ -86,13 +86,21 @@
   const aeoFindings = findings.filter(f => f.cat === 'AEO').length;
   const secFindings = findings.filter(f => f.cat === 'Security').length;
 
+  // Accurate, complete category breakdown (e.g. "2 Security, 2 Content, 1 SEO, 1 AEO, 1 Trust")
+  // so the numbers always add up to the total finding count shown above it.
+  const catCounts = findings.reduce((m, f) => { m[f.cat] = (m[f.cat] || 0) + 1; return m; }, {});
+  const breakdownStr = Object.entries(catCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, n]) => `${n} ${cat}`)
+    .join(', ');
+
   const overviewInsight = insight(
     `<p style="margin-bottom:12px"><strong>Your biggest opportunity is ${lowestCat.name}.</strong> At ${lowestCat.score}%, this category is pulling your overall score down the most. ${highestCat.name} is your strongest area at ${highestCat.score}%, which means the foundation is there — you're not starting from scratch.</p>` +
     `<p>${overall < 40 ? 'Sites scoring below 40 are effectively invisible to both search engines and AI answer engines. The good news: the gap between "broken" and "average" is where the easiest wins live. Most of these fixes take hours, not weeks.' : overall < 70 ? 'You have a functional site with specific gaps. This is the best position to be in — you don\'t need a rebuild, you need targeted fixes that compound on each other.' : 'This is a strong score. Focus on the remaining gaps to move from good to elite. At this level, each improvement delivers outsized returns because the foundation is already solid.'}</p>`
   );
 
   const findingsInsight = insight(
-    `<p style="margin-bottom:12px"><strong>${findings.length} findings break down to ${seoFindings} SEO, ${aeoFindings} AEO, and ${secFindings} security issues.</strong> ${seoFindings + aeoFindings > secFindings ? 'The concentration in SEO and AEO means your site\'s visibility problem is bigger than its security problem. Fixing search presence should come first — you can\'t convert visitors you don\'t have.' : 'Security findings are prominent here. For B2B buyers who research vendors before making contact, visible security gaps erode trust before the first conversation happens.'}</p>` +
+    `<p style="margin-bottom:12px"><strong>${findings.length} findings break down to ${breakdownStr}.</strong> ${seoFindings + aeoFindings >= secFindings ? 'The concentration in SEO and AEO means your site\'s visibility problem is at least as big as its security problem. Fixing search presence should come first — you can\'t convert visitors you don\'t have.' : 'Security findings are prominent here. For B2B buyers who research vendors before making contact, visible security gaps erode trust before the first conversation happens.'}</p>` +
     `<p>${criticalCount > 0 ? `The ${criticalCount} critical issues should be addressed within the next 7 days. Each one is actively costing you discoverability or credibility right now. The non-critical findings are optimization opportunities that compound over time.` : 'No critical issues found — that\'s a strong position. The findings here are optimization opportunities. Prioritize by impact and work through them systematically.'}</p>`
   );
 
@@ -156,7 +164,9 @@
 
   // SEO checks
   const seoChecks = [
-    chk('Title Tag', seo.title?.value && seo.title.length >= 15 ? 'warn' : 'fail', `"${seo.title?.value || 'missing'}" — ${seo.title?.length || 0} chars`),
+    chk('Title Tag',
+      !seo.title?.value ? 'fail' : (seo.title.length >= 30 && seo.title.length <= 60) ? 'pass' : 'warn',
+      `"${seo.title?.value || 'missing'}" — ${seo.title?.length || 0} chars${seo.title?.value && (seo.title.length < 30 || seo.title.length > 60) ? ' (aim for 30–60)' : ''}`),
     chk('Meta Description', seo.metaDescription?.exists ? 'pass' : 'fail', seo.metaDescription?.exists ? 'Present' : 'Missing entirely'),
     chk('H1 Tag', seo.h1?.count === 1 ? 'pass' : seo.h1?.count > 1 ? 'warn' : 'fail', `${seo.h1?.count || 0} H1 tag(s) found`),
     chk('Canonical URL', seo.canonical?.exists ? 'pass' : 'fail', seo.canonical?.value || 'Missing'),
@@ -166,7 +176,7 @@
     chk('Word Count', seo.wordCount >= 800 ? 'pass' : seo.wordCount >= 400 ? 'warn' : 'fail', `${seo.wordCount || 0} words. Target: 800+`),
     chk('Viewport', seo.viewport ? 'pass' : 'fail', seo.viewport ? 'Mobile viewport set' : 'Missing viewport meta'),
     chk('HTML Lang', seo.htmlLang ? 'pass' : 'fail', seo.htmlLang ? `lang="${seo.htmlLang}"` : 'Missing. Hurts accessibility and internationalization.'),
-    chk('Heading Hierarchy', seo.headingHierarchy !== false ? 'pass' : 'fail', seo.headingHierarchy !== false ? 'Proper H1→H2→H3 nesting' : 'Headings skip levels. Fix nesting order.'),
+    chk('Heading Hierarchy', seo.headingHierarchy ? 'pass' : 'fail', seo.headingHierarchy ? 'Proper H1→H2→H3 nesting' : (seo.h1?.count ? 'Headings skip levels. Fix nesting order.' : 'No H1 to anchor the heading hierarchy.')),
   ].join('');
 
   // AEO checks
@@ -231,7 +241,7 @@
       <span style="font-size:10px;color:#475569;font-family:'JetBrains Mono',monospace">${scanDate}</span>
     </div>
     <h1 style="font-size:36px;font-weight:900;margin:8px 0 4px;letter-spacing:-1.5px;background:linear-gradient(135deg,#e2e8f0,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${domain}</h1>
-    <p style="font-size:13px;color:#64748b">${data.tech?.cms || 'Unknown CMS'} • ${data.tech?.hosting || 'Unknown hosting'}</p>
+    <p style="font-size:13px;color:#64748b">${data.tech?.cms ? data.tech.cms : 'No CMS detected'} • ${data.tech?.hosting || 'Unknown hosting'}</p>
   </div></div>
 
   <div class="tabs"><div class="tabs-in" id="tabBar">
@@ -387,12 +397,16 @@
   });
 
   // ===== REVENUE CALCULATOR =====
+  // cLift is now a RELATIVE conversion uplift (e.g. 0.15 = +15% better conversion), not an
+  // absolute percentage-point add. Stacking absolute points onto a tiny 0.3% base produced
+  // implausible 8x conversion jumps; relative uplifts compound to a defensible improvement.
   const TIERS = [
-    { num:'Tier 1', title:'SEO Quick Wins', desc:'Title, meta description, H1, Open Graph tags', tLift:0.20, cLift:0.005, color:'#22c55e', bg:'#22c55e11', bc:'#22c55e33' },
-    { num:'Tier 2', title:'Schema & AEO', desc:'JSON-LD, Organization schema, FAQ markup', tLift:0.25, cLift:0.003, color:'#6366f1', bg:'#6366f111', bc:'#6366f133' },
-    { num:'Tier 3', title:'Content Expansion', desc:'Homepage copy 800+ words, blog articles, case studies', tLift:0.50, cLift:0.005, color:'#f59e0b', bg:'#f59e0b11', bc:'#f59e0b33' },
-    { num:'Tier 4', title:'Trust & Conversion', desc:'Lead capture forms, security headers, testimonials', tLift:0.0, cLift:0.01, color:'#60a5fa', bg:'#60a5fa11', bc:'#60a5fa33' },
+    { num:'Tier 1', title:'SEO Quick Wins', desc:'Title, meta description, H1, Open Graph tags', tLift:0.20, cLift:0.15, color:'#22c55e', bg:'#22c55e11', bc:'#22c55e33' },
+    { num:'Tier 2', title:'Schema & AEO', desc:'JSON-LD, Organization schema, FAQ markup', tLift:0.25, cLift:0.10, color:'#6366f1', bg:'#6366f111', bc:'#6366f133' },
+    { num:'Tier 3', title:'Content Expansion', desc:'Homepage copy 800+ words, blog articles, case studies', tLift:0.50, cLift:0.15, color:'#f59e0b', bg:'#f59e0b11', bc:'#f59e0b33' },
+    { num:'Tier 4', title:'Trust & Conversion', desc:'Lead capture forms, security headers, testimonials', tLift:0.0, cLift:0.30, color:'#60a5fa', bg:'#60a5fa11', bc:'#60a5fa33' },
   ];
+  const CONV_CEILING = 0.05; // hard cap at 5% — keeps results below the 8–15% "elite" benchmark
 
   function syncSl(which) {
     const input = document.getElementById('v-' + which);
@@ -426,8 +440,8 @@
     const tierR = TIERS.map(t => {
       const pV = cumV, pC = cumC;
       cumV = Math.round(cumV * (1 + t.tLift));
-      cumC = cumC + t.cLift;
-      const nL = cumV * cumC, aL = nL - pV * pC;
+      cumC = Math.min(CONV_CEILING, cumC * (1 + t.cLift)); // relative uplift, capped at the ceiling
+      const nL = cumV * cumC, aL = Math.max(0, nL - pV * pC);
       return { ...t, addedLeads: aL, addedPipeline: aL * deal, cumPipeline: nL * deal };
     });
 
@@ -438,7 +452,7 @@
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">${t.title}</div>
         <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.5">${t.desc}</div>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #1e293b"><span style="font-size:11px;color:#94a3b8">Traffic lift</span><span style="font-size:14px;font-weight:700;color:${t.tLift>0?t.color:'#475569'};font-family:'JetBrains Mono',monospace">+${Math.round(t.tLift*100)}%</span></div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #1e293b"><span style="font-size:11px;color:#94a3b8">Conv. lift</span><span style="font-size:14px;font-weight:700;color:${t.color};font-family:'JetBrains Mono',monospace">+${(t.cLift*100).toFixed(1)}%</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #1e293b"><span style="font-size:11px;color:#94a3b8">Conv. uplift</span><span style="font-size:14px;font-weight:700;color:${t.color};font-family:'JetBrains Mono',monospace">+${Math.round(t.cLift*100)}%</span></div>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #1e293b"><span style="font-size:11px;color:#94a3b8">New leads/mo</span><span style="font-size:14px;font-weight:700;color:${t.color};font-family:'JetBrains Mono',monospace">+${t.addedLeads.toFixed(1)}</span></div>
         <div style="margin-top:14px;padding:12px;border-radius:8px;text-align:center;background:${t.bg}">
           <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:${t.color};margin-bottom:2px">Added Pipeline / Month</div>

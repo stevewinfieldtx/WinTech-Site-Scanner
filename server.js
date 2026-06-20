@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { fullScan, quickScan, checkWpExposure } = require('./lib/scanner');
 const db = require('./lib/db');
@@ -8,9 +9,70 @@ const db = require('./lib/db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Secret used to sign admin session tokens. Set SESSION_SECRET in production so tokens
+// survive restarts; otherwise a random per-process secret is used (tokens invalidate on restart).
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Security headers — the scanner flags sites with "zero security headers", so its own
+// site should not be one of them. Applied to every response.
+app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  // 'unsafe-inline' is required because the report and landing page use inline styles,
+  // inline <script> blocks, and inline event handlers. Tighten with nonces if those are removed.
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline'; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data:; " +
+    "connect-src 'self'; " +
+    "base-uri 'self'; frame-ancestors 'none'");
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ---- Signed admin session tokens (HMAC) ----
+// Replaces the previous base64("id:timestamp") scheme, which any visitor could forge.
+function signToken(adminId) {
+  const payload = `${adminId}:${Date.now()}`;
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+  return Buffer.from(`${payload}:${sig}`).toString('base64');
+}
+
+function verifyToken(token) {
+  try {
+    const decoded = Buffer.from(token, 'base64').toString('utf8');
+    const lastColon = decoded.lastIndexOf(':');
+    if (lastColon === -1) return null;
+    const payload = decoded.slice(0, lastColon);
+    const sig = decoded.slice(lastColon + 1);
+    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null; // tampered/forged
+    const [id, ts] = payload.split(':');
+    if (!id || Date.now() - parseInt(ts) > 24 * 60 * 60 * 1000) return null;  // missing id or expired
+    return parseInt(id);
+  } catch {
+    return null;
+  }
+}
+
+// Constant-time string comparison for secrets (avoids timing leaks on the team password).
+function safeEqual(a, b) {
+  const ab = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
 
 
 // ============================================================
@@ -122,7 +184,7 @@ app.post('/api/unlock', async (req, res) => {
           message: 'WinTech team member detected. Enter your team password.',
         });
       }
-      if (teamPassword !== process.env.TEAM_PASSWORD) {
+      if (!process.env.TEAM_PASSWORD || !safeEqual(teamPassword, process.env.TEAM_PASSWORD)) {
         return res.json({
           status: 'team_auth_failed',
           message: 'Incorrect team password.',
@@ -213,8 +275,8 @@ app.post('/api/admin/login', async (req, res) => {
     const valid = await bcrypt.compare(password, admin.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    // Simple token (in production use JWT)
-    const token = Buffer.from(`${admin.id}:${Date.now()}`).toString('base64');
+    // HMAC-signed token — cannot be forged without SESSION_SECRET
+    const token = signToken(admin.id);
     res.json({ status: 'ok', token, email: admin.email });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -242,18 +304,10 @@ app.get('/api/admin/leads', adminAuth, async (req, res) => {
 function adminAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
-  // Simple check - in production use proper JWT
-  try {
-    const decoded = Buffer.from(token, 'base64').toString();
-    const [id, ts] = decoded.split(':');
-    if (!id || Date.now() - parseInt(ts) > 24 * 60 * 60 * 1000) {
-      return res.status(401).json({ error: 'Token expired' });
-    }
-    req.adminId = parseInt(id);
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+  const adminId = verifyToken(token);
+  if (!adminId) return res.status(401).json({ error: 'Invalid or expired token' });
+  req.adminId = adminId;
+  next();
 }
 
 
