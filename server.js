@@ -19,14 +19,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Step 1: Quick preview scan (no email required, returns gated overview)
 app.post('/api/scan', async (req, res) => {
-  const { url } = req.body;
+  const { url, force } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
   try {
     const domain = new URL(url.startsWith('http') ? url : 'https://' + url).hostname;
 
-    // Check if we have a recent scan
-    const existingSite = await db.getSiteByDomain(domain);
+    // Check if we have a recent scan (skip if force=true)
+    if (!force) {
+      const existingSite = await db.getSiteByDomain(domain);
     if (existingSite) {
       const latestScan = await db.getLatestScan(existingSite.id);
       if (latestScan) {
@@ -62,6 +63,7 @@ app.post('/api/scan', async (req, res) => {
         }
       }
     }
+    } // end force check
 
     // Full scan
     console.log(`[SCAN] Starting full scan for ${domain}`);

@@ -132,22 +132,6 @@
   }
   .override-btn:hover { background: #f59e0b22; }
 
-  /* Recent scans */
-  .recent {
-    max-width: 720px; margin: 60px auto 40px; padding: 0 24px;
-  }
-  .recent h2 {
-    font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #94a3b8;
-  }
-  .recent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .recent-card {
-    background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;
-    padding: 16px; text-align: center; cursor: default;
-  }
-  .recent-domain { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
-  .recent-score { font-size: 32px; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
-  .recent-date { font-size: 10px; color: #475569; margin-top: 4px; }
-
   /* Footer */
   .footer {
     text-align: center; padding: 40px 24px; border-top: 1px solid #1e293b; margin-top: 60px;
@@ -263,12 +247,6 @@
   </div>
 </div>
 
-<!-- Recent Scans -->
-<div class="recent" id="recentSection">
-  <h2>Recent Scans</h2>
-  <div class="recent-grid" id="recentGrid"></div>
-</div>
-
 <div class="footer">
   <p>WinTech Site Scanner &nbsp;•&nbsp; Powered by <a href="https://wintechpartners.com">WinTech Partners</a></p>
 </div>
@@ -379,7 +357,7 @@ function hideScanningOverlay() {
   if (overlay._stepInterval) { clearInterval(overlay._stepInterval); }
 }
 
-async function startScan() {
+async function startScan(forceRescan = false) {
   const url = document.getElementById('urlInput').value.trim();
   if (!url) return;
 
@@ -396,7 +374,7 @@ async function startScan() {
     const resp = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, force: forceRescan }),
     });
     const data = await resp.json();
 
@@ -412,8 +390,13 @@ async function startScan() {
 
     currentScanId = data.scanId;
     currentDomain = data.domain;
-    status.textContent = '';
     showPreview(data);
+
+    if (data.status === 'cached') {
+      status.innerHTML = 'Showing cached results from ' + new Date(data.scanDate).toLocaleDateString() + '. <a href="#" onclick="startScan(true);return false" style="color:#6366f1;font-weight:600">Force fresh scan →</a>';
+    } else {
+      status.textContent = '';
+    }
 
   } catch (err) {
     hideScanningOverlay();
@@ -560,26 +543,6 @@ async function submitTeamPass() {
   }
 }
 
-// ===== RECENT SCANS =====
-async function loadRecent() {
-  try {
-    const resp = await fetch('/api/recent');
-    const scans = await resp.json();
-    if (!scans.length) { document.getElementById('recentSection').style.display = 'none'; return; }
-    document.getElementById('recentGrid').innerHTML = scans.map(s => {
-      const scores = typeof s.scores === 'string' ? JSON.parse(s.scores) : s.scores;
-      const overall = scores?.overall || 0;
-      const color = sc(overall);
-      const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `<div class="recent-card">
-        <div class="recent-domain">${s.domain}</div>
-        <div class="recent-score" style="color:${color}">${overall}</div>
-        <div class="recent-date">${date}</div>
-      </div>`;
-    }).join('');
-  } catch { document.getElementById('recentSection').style.display = 'none'; }
-}
-loadRecent();
 </script>
 </body>
 </html>
