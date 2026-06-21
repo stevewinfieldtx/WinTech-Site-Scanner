@@ -3,560 +3,237 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WinTech Site Scanner — Free Website Audit</title>
+<title>WinTech Site Scanner — Website & Audience Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #020617; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
-  .mono { font-family: 'JetBrains Mono', monospace; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#020617; color:#e2e8f0; font-family:'Inter',system-ui,sans-serif; min-height:100vh; }
+  .mono { font-family:'JetBrains Mono',monospace; }
+  a { color:#6366f1; text-decoration:none; }
+  .wrap { max-width:720px; margin:0 auto; padding:0 24px; }
+  .hero { text-align:center; padding:72px 24px 8px; }
+  .eyebrow { font-size:11px; font-weight:700; letter-spacing:2px; color:#6366f1; text-transform:uppercase; margin-bottom:12px; }
+  .hero h1 { font-size:40px; font-weight:900; letter-spacing:-1.5px; line-height:1.1; margin-bottom:16px;
+    background:linear-gradient(135deg,#e2e8f0,#6366f1); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hero p { font-size:16px; color:#94a3b8; line-height:1.6; max-width:540px; margin:0 auto; }
 
-  /* Hero */
-  .hero {
-    max-width: 720px; margin: 0 auto; padding: 80px 24px 40px; text-align: center;
-  }
-  .hero-eyebrow {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #6366f1;
-    text-transform: uppercase; margin-bottom: 12px;
-  }
-  .hero h1 {
-    font-size: 42px; font-weight: 900; letter-spacing: -1.5px; line-height: 1.1;
-    margin-bottom: 16px;
-    background: linear-gradient(135deg, #e2e8f0, #6366f1);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .hero p { font-size: 16px; color: #94a3b8; line-height: 1.6; max-width: 520px; margin: 0 auto; }
+  .scan-form { max-width:600px; margin:32px auto 0; }
+  .scan-input { width:100%; padding:16px 20px; font-size:16px; border-radius:12px; border:2px solid #1e293b;
+    background:#0f172a; color:#e2e8f0; font-family:'JetBrains Mono',monospace; outline:none; transition:border-color .2s; }
+  .scan-input:focus { border-color:#6366f1; }
+  .scan-input::placeholder { color:#475569; }
+  .modes { display:flex; gap:10px; margin-top:12px; }
+  .mode-btn { flex:1; padding:15px 12px; font-size:14px; font-weight:700; border-radius:12px; border:1px solid #334155;
+    background:#0f172a; color:#e2e8f0; cursor:pointer; font-family:'Inter',sans-serif; transition:all .15s; }
+  .mode-btn:hover { border-color:#6366f1; }
+  .mode-btn b { display:block; }
+  .mode-btn small { font-weight:500; color:#94a3b8; font-size:11px; }
+  .mode-btn.website:hover { background:#6366f111; }
+  .mode-btn.audience:hover { background:#22c55e11; border-color:#22c55e; }
+  .mode-btn.both:hover { background:#f59e0b11; border-color:#f59e0b; }
+  .mode-btn:disabled { opacity:.5; cursor:not-allowed; }
 
-  /* Scan Form */
-  .scan-form {
-    max-width: 600px; margin: 32px auto 0; display: flex; gap: 8px;
-  }
-  .scan-input {
-    flex: 1; padding: 16px 20px; font-size: 16px; border-radius: 12px;
-    border: 2px solid #1e293b; background: #0f172a; color: #e2e8f0;
-    font-family: 'JetBrains Mono', monospace; outline: none; transition: border-color 0.2s;
-  }
-  .scan-input:focus { border-color: #6366f1; }
-  .scan-input::placeholder { color: #475569; }
-  .scan-btn {
-    padding: 16px 32px; font-size: 15px; font-weight: 700; border-radius: 12px;
-    border: none; background: #6366f1; color: #fff; cursor: pointer;
-    font-family: 'Inter', sans-serif; white-space: nowrap; transition: background 0.2s;
-  }
-  .scan-btn:hover { background: #4f46e5; }
-  .scan-btn:disabled { background: #334155; cursor: not-allowed; }
+  .status { max-width:600px; margin:16px auto 0; text-align:center; font-size:13px; color:#64748b; min-height:20px; }
+  .status.error { color:#ef4444; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid #6366f133; border-top-color:#6366f1;
+    border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-right:8px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* Status */
-  .status {
-    max-width: 600px; margin: 16px auto 0; text-align: center;
-    font-size: 13px; color: #64748b; min-height: 20px;
-  }
-  .status.error { color: #ef4444; }
-  .status .spinner {
-    display: inline-block; width: 14px; height: 14px; border: 2px solid #6366f133;
-    border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite;
-    vertical-align: middle; margin-right: 6px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .results { max-width:680px; margin:36px auto 0; display:none; }
+  .results.show { display:block; }
+  .card { background:#0f172a; border:1px solid #1e293b; border-radius:16px; padding:28px; margin-bottom:18px; }
+  .card h2 { font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94a3b8; margin-bottom:4px; }
+  .card .dom { font-size:22px; font-weight:900; letter-spacing:-.5px; margin-bottom:18px;
+    background:linear-gradient(135deg,#e2e8f0,#6366f1); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 
-  /* Gated Preview */
-  .preview {
-    max-width: 720px; margin: 40px auto 0; display: none;
-  }
-  .preview.show { display: block; }
+  .scores { display:flex; align-items:flex-start; gap:28px; flex-wrap:wrap; }
+  .ring { flex-shrink:0; }
+  .bars { flex:1; min-width:240px; }
+  .bar-row { margin-bottom:9px; }
+  .bar-head { display:flex; justify-content:space-between; font-size:12px; font-weight:600; margin-bottom:3px; }
+  .bar-track { height:6px; border-radius:3px; background:#1e293b; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:3px; }
 
-  .preview-card {
-    background: #0f172a; border: 1px solid #1e293b; border-radius: 16px;
-    padding: 32px; text-align: center;
-  }
-  .preview-domain {
-    font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-bottom: 4px;
-    background: linear-gradient(135deg, #e2e8f0, #6366f1);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .preview-date { font-size: 12px; color: #64748b; margin-bottom: 24px; }
+  .aud-row { margin-bottom:12px; }
+  .aud-row .k { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#22c55e; margin-bottom:3px; }
+  .aud-row .v { font-size:15px; color:#e2e8f0; line-height:1.5; }
+  .badge { display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:6px; margin-top:2px; }
 
-  .preview-scores {
-    display: flex; align-items: flex-start; gap: 32px; justify-content: center;
-    flex-wrap: wrap; margin-bottom: 24px;
-  }
-  .preview-ring { flex-shrink: 0; }
-  .preview-bars { flex: 1; min-width: 260px; max-width: 400px; text-align: left; }
-  .bar-row { margin-bottom: 10px; }
-  .bar-header { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 3px; }
-  .bar-name { color: #e2e8f0; }
-  .bar-score { font-family: 'JetBrains Mono', monospace; }
-  .bar-track { height: 6px; border-radius: 3px; background: #1e293b; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .gate { border-top:1px dashed #334155; margin-top:20px; padding-top:18px; }
+  .gate p { font-size:13px; color:#94a3b8; margin-bottom:12px; line-height:1.5; }
+  .gate .row { display:flex; gap:8px; }
+  .gate input { flex:1; padding:13px 15px; font-size:14px; border-radius:10px; border:2px solid #1e293b;
+    background:#020617; color:#e2e8f0; outline:none; }
+  .gate input:focus { border-color:#6366f1; }
+  .gate button { padding:13px 22px; font-size:14px; font-weight:700; border-radius:10px; border:none;
+    background:#22c55e; color:#fff; cursor:pointer; white-space:nowrap; }
+  .gate button:hover { background:#16a34a; }
+  .gate .msg { margin-top:10px; font-size:13px; min-height:18px; color:#64748b; }
+  .gate .msg.error { color:#ef4444; }
 
-  /* Blur overlay for locked content */
-  .locked-overlay {
-    position: relative; margin-top: 24px;
-    background: linear-gradient(180deg, #0f172a 0%, #0f172a88 30%, #0f172a 100%);
-    border-radius: 12px; padding: 48px 32px; text-align: center;
-  }
-  .locked-overlay h3 {
-    font-size: 20px; font-weight: 800; margin-bottom: 8px;
-  }
-  .locked-overlay p {
-    font-size: 14px; color: #94a3b8; margin-bottom: 24px; line-height: 1.6;
-  }
-  .email-form { display: flex; gap: 8px; max-width: 460px; margin: 0 auto; }
-  .email-input {
-    flex: 1; padding: 14px 16px; font-size: 14px; border-radius: 10px;
-    border: 2px solid #1e293b; background: #020617; color: #e2e8f0;
-    font-family: 'Inter', sans-serif; outline: none;
-  }
-  .email-input:focus { border-color: #6366f1; }
-  .email-btn {
-    padding: 14px 24px; font-size: 14px; font-weight: 700; border-radius: 10px;
-    border: none; background: #22c55e; color: #fff; cursor: pointer;
-    font-family: 'Inter', sans-serif; white-space: nowrap;
-  }
-  .email-btn:hover { background: #16a34a; }
-  .email-status {
-    margin-top: 12px; font-size: 13px; color: #64748b; min-height: 20px;
-  }
-  .email-status.error { color: #ef4444; }
+  .models { margin-top:8px; }
+  .model { border:1px solid #1e293b; border-radius:10px; padding:14px 16px; margin-bottom:10px; }
+  .model .name { font-size:11px; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+  .model .line { font-size:13px; color:#cbd5e1; line-height:1.5; margin-bottom:4px; }
+  .model .line b { color:#e2e8f0; }
 
-  /* Override prompt */
-  .override-prompt {
-    display: none; margin-top: 16px; padding: 16px; border-radius: 10px;
-    background: #1e293b; border: 1px solid #334155;
-  }
-  .override-prompt.show { display: block; }
-  .override-prompt p { font-size: 13px; color: #f59e0b; margin-bottom: 12px; }
-  .override-btn {
-    padding: 10px 20px; font-size: 13px; font-weight: 600; border-radius: 8px;
-    border: 1px solid #f59e0b44; background: #f59e0b11; color: #f59e0b;
-    cursor: pointer; font-family: 'Inter', sans-serif;
-  }
-  .override-btn:hover { background: #f59e0b22; }
+  .footer { text-align:center; padding:48px 24px 40px; margin-top:40px; border-top:1px solid #1e293b; }
+  .footer p { font-size:12px; color:#475569; margin-bottom:6px; }
+  .footer a { color:#64748b; }
 
-  /* Footer */
-  .footer {
-    text-align: center; padding: 40px 24px; border-top: 1px solid #1e293b; margin-top: 60px;
-  }
-  .footer p { font-size: 11px; color: #334155; }
-  .footer a { color: #475569; text-decoration: none; }
-
-  @media (max-width: 640px) {
-    .hero h1 { font-size: 28px; }
-    .scan-form { flex-direction: column; }
-    .email-form { flex-direction: column; }
-    .recent-grid { grid-template-columns: 1fr; }
-    .preview-scores { flex-direction: column; align-items: center; }
-  }
-
-  /* Scanning Overlay */
-  .scanning-overlay {
-    display: none; max-width: 600px; margin: 32px auto 0; text-align: center;
-  }
-  .scanning-overlay.show { display: block; }
-  .scanning-inner {
-    background: #0f172a; border: 1px solid #1e293b; border-radius: 16px;
-    padding: 40px 32px;
-  }
-  .scanning-ring { margin-bottom: 16px; }
-  .scanning-step {
-    font-size: 14px; font-weight: 600; color: #6366f1; margin-bottom: 32px;
-    min-height: 20px; transition: opacity 0.3s;
-  }
-  .scanning-quote-wrap {
-    border-top: 1px solid #1e293b; padding-top: 24px; max-width: 440px; margin: 0 auto;
-  }
-  .scanning-quote {
-    font-size: 16px; font-weight: 500; color: #cbd5e1; line-height: 1.6;
-    font-style: italic; min-height: 72px; transition: opacity 0.5s;
-  }
-  .scanning-author {
-    font-size: 11px; color: #475569; margin-top: 12px; letter-spacing: 1px;
-    text-transform: uppercase;
-  }
+  @media (max-width:640px){ .hero h1{font-size:30px} .modes{flex-direction:column} .scores{flex-direction:column;align-items:center} }
 </style>
 </head>
 <body>
 
 <div class="hero">
-  <div class="hero-eyebrow">WinTech Site Scanner</div>
-  <h1>How much revenue is your website leaving on the table?</h1>
-  <p>Free audit across SEO, AI readiness, security, performance, and conversion. See your score in 30 seconds. Get the full report with fixes in your inbox.</p>
+  <div class="eyebrow">WinTech Site Scanner</div>
+  <h1>Is your website built to win the customer you want?</h1>
+  <p>Two reads in one place: <strong>Website Intel</strong> grades the site across 11 dimensions, and <strong>Audience Intel</strong> tells you who the site appears to be for and what it's trying to do — judged by three AIs.</p>
 </div>
 
-<div class="scan-form" id="scanForm">
-  <input type="text" class="scan-input" id="urlInput" placeholder="yoursite.com" autocomplete="off" autofocus>
-  <button class="scan-btn" id="scanBtn" onclick="startScan()">Scan Now</button>
-</div>
-<div class="status" id="status"></div>
-
-<!-- Scanning Loading Experience -->
-<div class="scanning-overlay" id="scanningOverlay">
-  <div class="scanning-inner">
-    <div class="scanning-ring">
-      <svg width="80" height="80" viewBox="0 0 80 80">
-        <circle cx="40" cy="40" r="34" fill="none" stroke="#1e293b" stroke-width="4"/>
-        <circle cx="40" cy="40" r="34" fill="none" stroke="#6366f1" stroke-width="4"
-          stroke-dasharray="60 154" stroke-linecap="round"
-          transform="rotate(-90 40 40)">
-          <animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="1.2s" repeatCount="indefinite"/>
-        </circle>
-      </svg>
+<div class="wrap">
+  <div class="scan-form">
+    <input type="text" class="scan-input" id="urlInput" placeholder="yoursite.com" autocomplete="off" autofocus>
+    <div class="modes">
+      <button class="mode-btn website" onclick="run('website')"><b>Website Intel</b><small>11-dimension audit</small></button>
+      <button class="mode-btn audience" onclick="run('audience')"><b>Audience Intel</b><small>who + goal, by 3 AIs</small></button>
+      <button class="mode-btn both" onclick="run('both')"><b>Both</b><small>full picture</small></button>
     </div>
-    <div class="scanning-step" id="scanStep">Connecting to server...</div>
-    <div class="scanning-quote-wrap">
-      <div class="scanning-quote" id="scanQuote"></div>
-      <div class="scanning-author">— Sun Tzu, adapted</div>
-    </div>
+    <div class="status" id="status"></div>
   </div>
-</div>
 
-<!-- Gated Preview -->
-<div class="preview" id="preview">
-  <div class="preview-card">
-    <div class="preview-domain" id="previewDomain"></div>
-    <div class="preview-date" id="previewDate"></div>
-
-    <div class="preview-scores">
-      <div class="preview-ring" id="previewRing"></div>
-      <div class="preview-bars" id="previewBars"></div>
-    </div>
-
-    <div class="locked-overlay">
-      <h3>Unlock Your Full Report</h3>
-      <p>Enter your work email to access the complete audit with findings, security analysis, and revenue impact calculator.</p>
-
-      <div class="email-form">
-        <input type="email" class="email-input" id="emailInput" placeholder="you@yourcompany.com">
-        <button class="email-btn" id="emailBtn" onclick="unlockReport()">Get Report</button>
-      </div>
-      <div class="email-status" id="emailStatus"></div>
-
-      <div class="override-prompt" id="overridePrompt">
-        <p id="overrideMsg"></p>
-        <button class="override-btn" onclick="unlockReport(true)">I have permission to view this report</button>
-      </div>
-
-      <div class="override-prompt" id="teamPrompt">
-        <p style="color:#6366f1">WinTech team member detected. Enter your team password.</p>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <input type="password" class="email-input" id="teamPassInput" placeholder="Team password" onkeydown="if(event.key==='Enter') submitTeamPass()">
-          <button class="email-btn" style="background:#6366f1" onclick="submitTeamPass()">Verify</button>
-        </div>
-        <div class="email-status" id="teamStatus"></div>
-      </div>
-    </div>
-  </div>
+  <div class="results" id="results"></div>
 </div>
 
 <div class="footer">
-  <p>WinTech Site Scanner &nbsp;•&nbsp; Powered by <a href="https://wintechpartners.com">WinTech Partners</a></p>
-  <p id="compareLink" style="margin-top:8px"></p>
+  <p><a href="#" onclick="showHistory();return false">View my past scans</a> &nbsp;·&nbsp; Need help? <a href="mailto:support@wintechpartners.com">support@wintechpartners.com</a></p>
+  <p id="compareLink"></p>
+  <p>WinTech Site Scanner &nbsp;·&nbsp; Powered by <a href="https://wintechpartners.com">WinTech Partners</a></p>
 </div>
 
 <script>
-let currentScanId = null;
-let currentDomain = null;
-let quoteInterval = null;
+const FORCE_KEY = new URLSearchParams(location.search).get('fk') || '';
+let pending = { scanId: null, audienceUrl: null };
 
-// Private force-rescan key. Visit the site as ?fk=YOUR_KEY to enable fresh scans for yourself only.
-// Must match FORCE_RESCAN_KEY on the server; without it, the server ignores force requests.
-const FORCE_KEY = new URLSearchParams(window.location.search).get('fk') || '';
+function sc(s){ if(s>=80)return'#22c55e'; if(s>=60)return'#f59e0b'; if(s>=40)return'#f97316'; return'#ef4444'; }
+function grade(s){ if(s>=90)return'A'; if(s>=80)return'B'; if(s>=60)return'C'; if(s>=40)return'D'; return'F'; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const $ = id => document.getElementById(id);
+$('urlInput').addEventListener('keydown', e => { if(e.key==='Enter') run('both'); });
+if (FORCE_KEY) window.addEventListener('DOMContentLoaded', () => { const el=$('compareLink'); if(el) el.innerHTML='<a href="/compare?fk='+encodeURIComponent(FORCE_KEY)+'">Compare against competitors →</a>'; });
 
-// Surface the private competitor-comparison tool only when you have the key.
-if (FORCE_KEY) {
-  window.addEventListener('DOMContentLoaded', () => {
-    const el = document.getElementById('compareLink');
-    if (el) el.innerHTML = '<a href="/compare?fk=' + encodeURIComponent(FORCE_KEY) + '" style="color:#6366f1;font-weight:600">Compare against competitors →</a>';
+function setStatus(t, err){ const s=$('status'); s.className = err ? 'status error' : 'status'; s.innerHTML = t; }
+function modesDisabled(d){ document.querySelectorAll('.mode-btn').forEach(b=>b.disabled=d); }
+
+async function run(mode){
+  const url = $('urlInput').value.trim();
+  if(!url){ setStatus('Enter a website URL.', true); return; }
+  pending = { scanId:null, audienceUrl:null };
+  $('results').innerHTML = ''; $('results').classList.remove('show');
+  modesDisabled(true);
+  setStatus('<span class="spinner"></span>Analyzing ' + esc(url) + '…');
+  try {
+    if(mode==='website' || mode==='both') await runWebsite(url);
+    if(mode==='audience' || mode==='both') await runAudience(url);
+    setStatus('');
+    $('results').classList.add('show');
+    $('results').scrollIntoView({ behavior:'smooth', block:'start' });
+  } catch(err){ setStatus('Something went wrong. Please try again.', true); }
+  modesDisabled(false);
+}
+
+async function runWebsite(url){
+  const r = await fetch('/api/scan', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ url, force: !!FORCE_KEY, forceKey: FORCE_KEY }) });
+  const data = await r.json();
+  if(data.error){ setStatus(data.error, true); return; }
+  pending.scanId = data.scanId;
+  const cats = data.scores.categories, o = data.scores.overall, col = sc(o), R=70, C=2*Math.PI*R, off=C-(o/100)*C;
+  let bars=''; for(const k in cats){ const c=cats[k], cc=sc(c.score);
+    bars += '<div class="bar-row"><div class="bar-head"><span>'+esc(c.icon||'')+' '+esc(c.name)+'</span><span style="color:'+cc+'" class="mono">'+c.score+'%</span></div><div class="bar-track"><div class="bar-fill" style="width:'+c.score+'%;background:'+cc+'"></div></div></div>'; }
+  $('results').insertAdjacentHTML('beforeend',
+    '<div class="card" id="webcard"><h2>Website Intel</h2><div class="dom">'+esc(data.domain)+'</div>'+
+    '<div class="scores"><div class="ring"><svg width="150" height="150"><circle cx="75" cy="75" r="'+R+'" fill="none" stroke="#1e293b" stroke-width="11"/>'+
+    '<circle cx="75" cy="75" r="'+R+'" fill="none" stroke="'+col+'" stroke-width="11" stroke-dasharray="'+C+'" stroke-dashoffset="'+off+'" stroke-linecap="round" transform="rotate(-90 75 75)"/>'+
+    '<text x="75" y="70" text-anchor="middle" fill="'+col+'" font-size="40" font-weight="800" font-family="Inter">'+o+'</text>'+
+    '<text x="75" y="92" text-anchor="middle" fill="#94a3b8" font-size="12">/ 100</text>'+
+    '<text x="75" y="110" text-anchor="middle" fill="'+col+'" font-size="15" font-weight="700">'+grade(o)+'</text></svg></div>'+
+    '<div class="bars">'+bars+'</div></div>'+
+    gateHtml('web','Unlock the full 11-dimension report (findings, security, revenue impact).')+'</div>');
+}
+
+async function runAudience(url){
+  const r = await fetch('/api/audience', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url }) });
+  const data = await r.json();
+  if(data.error){ $('results').insertAdjacentHTML('beforeend','<div class="card"><h2>Audience Intel</h2><p style="color:#94a3b8;font-size:14px">'+esc(data.error)+'</p></div>'); return; }
+  pending.audienceUrl = url;
+  $('results').insertAdjacentHTML('beforeend',
+    '<div class="card" id="audcard"><h2>Audience Intel</h2><div class="dom">'+esc(data.domain)+'</div>'+
+    '<div class="aud-row"><div class="k">Who it appears to be for</div><div class="v">'+esc(data.audience||'—')+'</div></div>'+
+    '<div class="aud-row"><div class="k">What it seems to want them to do</div><div class="v">'+esc(data.goal||'—')+'</div></div>'+
+    '<div class="aud-row"><div class="k">Primary call-to-action</div><div class="v">'+esc(data.cta||'—')+'</div></div>'+
+    '<div id="audDeep"></div>'+
+    gateHtml('aud','Get the deeper read: WHY three different AIs concluded this, and whether they agree on who you are.')+'</div>');
+}
+
+function gateHtml(which, blurb){
+  return '<div class="gate" id="gate-'+which+'"><p>'+blurb+' Enter a work email at the site\'s domain.</p>'+
+    '<div class="row"><input type="email" id="email-'+which+'" placeholder="you@yourcompany.com"><button onclick="unlock(\''+which+'\')">Unlock</button></div>'+
+    '<div class="msg" id="msg-'+which+'"></div></div>';
+}
+
+async function unlock(which){
+  const email = ($('email-'+which).value||'').trim();
+  const msg = $('msg-'+which);
+  if(!email || !email.includes('@')){ msg.className='msg error'; msg.textContent='Enter a valid email.'; return; }
+  msg.className='msg'; msg.textContent='Verifying…';
+  try {
+    if(which==='web'){
+      const r = await fetch('/api/unlock', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, scanId: pending.scanId }) });
+      const d = await r.json();
+      if(d.status==='unlocked'){ window.location.href = d.reportUrl; return; }
+      msg.className='msg error'; msg.textContent = d.message || d.error || 'Could not unlock.';
+    } else {
+      const r = await fetch('/api/audience', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: pending.audienceUrl, deep:true, email }) });
+      const d = await r.json();
+      if(d.status==='deep'){ renderDeepAudience(d); $('gate-aud').style.display='none'; return; }
+      msg.className='msg error'; msg.textContent = d.message || d.error || 'Could not unlock.';
+    }
+  } catch(e){ msg.className='msg error'; msg.textContent='Something went wrong. Try again.'; }
+}
+
+function renderDeepAudience(d){
+  const clarityColor = d.clarity==='clear' ? '#22c55e' : d.clarity==='mixed' ? '#f59e0b' : '#ef4444';
+  let html = '<div class="gate" style="border-top:1px solid #1e293b"><div class="aud-row"><div class="k">Positioning clarity</div>'+
+    '<div class="v"><span class="badge" style="background:'+clarityColor+'22;color:'+clarityColor+'">'+esc(d.clarity)+' · '+d.agreement+'% model agreement</span></div></div>'+
+    '<p style="margin:12px 0 8px;font-size:13px;color:#94a3b8">How GPT, Gemini, and Claude each read your homepage:</p><div class="models">';
+  (d.models||[]).forEach(m => {
+    const nm = (m.model||'').split('/').pop();
+    html += '<div class="model"><div class="name">'+esc(nm)+'</div>'+
+      '<div class="line"><b>For:</b> '+esc(m.audience||'—')+'</div>'+
+      '<div class="line"><b>Goal:</b> '+esc(m.goal||'—')+'</div>'+
+      '<div class="line"><b>Why:</b> '+esc(m.why||'—')+'</div></div>';
   });
+  html += '</div></div>';
+  $('audDeep').innerHTML = html;
 }
 
-// Sun Tzu quotes adapted for AI, websites, and the internet
-const QUOTES = [
-  "Every battle is won before it is ever fought. Every website visitor decides before they ever click.",
-  "If you know the enemy and know yourself, you need not fear the result. If you know your website and your competitor's, you need not fear the search results.",
-  "The supreme art of war is to subdue the enemy without fighting. The supreme art of marketing is to convert the visitor without selling.",
-  "In the midst of chaos, there is also opportunity. In the midst of algorithm changes, there is also advantage.",
-  "Appear weak when you are strong, and strong when you are weak. Your website should never appear weak.",
-  "The whole secret lies in confusing the enemy. The whole failure lies in confusing your visitor.",
-  "Let your plans be dark and impenetrable as night. Let your website be clear and navigable as day.",
-  "Opportunities multiply as they are seized. Rankings multiply as they are earned.",
-  "He who wishes to fight must first count the cost. He who wishes to rank must first fix the foundation.",
-  "To know your enemy, you must become your enemy. To know your customer, you must walk their journey.",
-  "The greatest victory is that which requires no battle. The greatest conversion is that which requires no persuasion.",
-  "Move swift as the wind and closely formed as the forest. Load fast as light and structured as schema.",
-  "All warfare is based on deception. All marketing is based on perception. Make yours accurate.",
-  "When the enemy is relaxed, make them toil. When your competitor is complacent, outwork their website.",
-  "There is no instance of a nation benefiting from prolonged warfare. There is no instance of a business benefiting from a broken website.",
-];
-
-const SCAN_STEPS = [
-  "Connecting to server...",
-  "Fetching HTML content...",
-  "Parsing SEO elements...",
-  "Checking SSL certificate...",
-  "Analyzing security headers...",
-  "Querying Mozilla Observatory...",
-  "Running Google PageSpeed...",
-  "Evaluating schema markup...",
-  "Scoring content quality...",
-  "Calculating revenue impact...",
-  "Generating findings...",
-  "Compiling your report...",
-];
-
-function sc(s) {
-  if (s >= 80) return '#22c55e';
-  if (s >= 60) return '#f59e0b';
-  if (s >= 40) return '#f97316';
-  return '#ef4444';
-}
-function grade(s) {
-  if (s >= 90) return 'A';
-  if (s >= 80) return 'B';
-  if (s >= 60) return 'C';
-  if (s >= 40) return 'D';
-  return 'F';
-}
-
-document.getElementById('urlInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') startScan();
-});
-document.getElementById('emailInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') unlockReport();
-});
-
-// ===== SCANNING =====
-function showScanningOverlay() {
-  const overlay = document.getElementById('scanningOverlay');
-  overlay.classList.add('show');
-  document.getElementById('preview').classList.remove('show');
-
-  // Start quote rotation
-  let quoteIdx = Math.floor(Math.random() * QUOTES.length);
-  document.getElementById('scanQuote').textContent = QUOTES[quoteIdx];
-  quoteInterval = setInterval(() => {
-    const el = document.getElementById('scanQuote');
-    el.style.opacity = '0';
-    setTimeout(() => {
-      quoteIdx = (quoteIdx + 1) % QUOTES.length;
-      el.textContent = QUOTES[quoteIdx];
-      el.style.opacity = '1';
-    }, 400);
-  }, 4500);
-
-  // Scan step progression
-  let stepIdx = 0;
-  const stepEl = document.getElementById('scanStep');
-  const stepInterval = setInterval(() => {
-    stepIdx++;
-    if (stepIdx < SCAN_STEPS.length) {
-      stepEl.style.opacity = '0';
-      setTimeout(() => {
-        stepEl.textContent = SCAN_STEPS[stepIdx];
-        stepEl.style.opacity = '1';
-      }, 200);
-    } else {
-      clearInterval(stepInterval);
-    }
-  }, 2500);
-
-  // Store interval refs for cleanup
-  overlay._stepInterval = stepInterval;
-}
-
-function hideScanningOverlay() {
-  const overlay = document.getElementById('scanningOverlay');
-  overlay.classList.remove('show');
-  if (quoteInterval) { clearInterval(quoteInterval); quoteInterval = null; }
-  if (overlay._stepInterval) { clearInterval(overlay._stepInterval); }
-}
-
-async function startScan(forceRescan = false) {
-  const url = document.getElementById('urlInput').value.trim();
-  if (!url) return;
-
-  const btn = document.getElementById('scanBtn');
-  const status = document.getElementById('status');
-  btn.disabled = true;
-  btn.textContent = 'Scanning...';
-  status.className = 'status';
-  status.textContent = '';
-
-  showScanningOverlay();
-
+async function showHistory(){
+  const email = prompt('Enter your email to see your past scans:');
+  if(!email) return;
   try {
-    const resp = await fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, force: forceRescan || !!FORCE_KEY, forceKey: FORCE_KEY }),
-    });
-    const data = await resp.json();
-
-    hideScanningOverlay();
-
-    if (data.error) {
-      status.className = 'status error';
-      status.textContent = data.error;
-      btn.disabled = false;
-      btn.textContent = 'Scan Now';
-      return;
-    }
-
-    currentScanId = data.scanId;
-    currentDomain = data.domain;
-    showPreview(data);
-
-    if (data.status === 'cached') {
-      const forceLink = FORCE_KEY ? ' <a href="#" onclick="startScan(true);return false" style="color:#6366f1;font-weight:600">Force fresh scan →</a>' : '';
-      status.innerHTML = 'Showing cached results from ' + new Date(data.scanDate).toLocaleDateString() + '.' + forceLink;
-    } else {
-      status.textContent = '';
-    }
-
-  } catch (err) {
-    hideScanningOverlay();
-    status.className = 'status error';
-    status.textContent = 'Scan failed. Please try again.';
-  }
-
-  btn.disabled = false;
-  btn.textContent = 'Scan Now';
+    const r = await fetch('/api/history?email='+encodeURIComponent(email.trim()));
+    const d = await r.json();
+    if(d.error){ alert(d.error); return; }
+    $('results').classList.add('show');
+    let rows = (d.history||[]).map(h => '<div class="aud-row"><div class="v">'+esc(h.domain)+' — <span style="color:#64748b">'+esc(h.kind)+'</span> · <span style="color:#64748b">'+new Date(h.created_at).toLocaleDateString()+'</span>'+(h.scan_id?' · <a href="/report/'+h.scan_id+'">view report</a>':'')+'</div></div>').join('');
+    if(!rows) rows = '<p style="color:#64748b;font-size:14px">No scans yet for this email.</p>';
+    const cap = d.limit==null ? 'unlimited' : (d.used+' of '+d.limit+' this month');
+    $('results').innerHTML = '<div class="card"><h2>Your scans — '+esc(d.email)+'</h2><p style="color:#94a3b8;font-size:13px;margin-bottom:14px">Usage: '+cap+'.</p>'+rows+'</div>';
+    $('results').scrollIntoView({ behavior:'smooth' });
+  } catch(e){ alert('Could not load history.'); }
 }
-
-// ===== GATED PREVIEW =====
-function showPreview(data) {
-  const scores = data.scores;
-  document.getElementById('previewDomain').textContent = data.domain;
-  document.getElementById('previewDate').textContent = 'Scanned ' + new Date(data.scanDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  const overall = scores.overall;
-  const color = sc(overall);
-  const r = 76, circ = 2 * Math.PI * r;
-  const offset = circ - (overall / 100) * circ;
-
-  document.getElementById('previewRing').innerHTML = `
-    <svg width="160" height="160">
-      <circle cx="80" cy="80" r="${r}" fill="none" stroke="#1e293b" stroke-width="12"/>
-      <circle cx="80" cy="80" r="${r}" fill="none" stroke="${color}" stroke-width="12"
-        stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
-        stroke-linecap="round" transform="rotate(-90 80 80)"/>
-      <text x="80" y="72" text-anchor="middle" fill="${color}" font-size="44" font-weight="800" font-family="Inter,sans-serif">${overall}</text>
-      <text x="80" y="94" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="Inter,sans-serif">/ 100</text>
-      <text x="80" y="114" text-anchor="middle" fill="${color}" font-size="16" font-weight="700" font-family="Inter,sans-serif">${grade(overall)}</text>
-    </svg>
-  `;
-
-  const cats = scores.categories;
-  let barsHtml = '';
-  for (const [key, cat] of Object.entries(cats)) {
-    const c = sc(cat.score);
-    barsHtml += `
-      <div class="bar-row">
-        <div class="bar-header">
-          <span class="bar-name">${cat.icon} ${cat.name}</span>
-          <span class="bar-score" style="color:${c}">${cat.score}%</span>
-        </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:${cat.score}%;background:linear-gradient(90deg,${c}cc,${c})"></div>
-        </div>
-      </div>
-    `;
-  }
-  document.getElementById('previewBars').innerHTML = barsHtml;
-
-  // Reset forms
-  document.getElementById('emailInput').value = '';
-  document.getElementById('emailStatus').textContent = '';
-  document.getElementById('overridePrompt').classList.remove('show');
-  document.getElementById('teamPrompt').classList.remove('show');
-
-  document.getElementById('preview').classList.add('show');
-  document.getElementById('preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// ===== EMAIL UNLOCK =====
-async function unlockReport(override = false) {
-  const email = document.getElementById('emailInput').value.trim();
-  if (!email || !email.includes('@')) {
-    document.getElementById('emailStatus').className = 'email-status error';
-    document.getElementById('emailStatus').textContent = 'Please enter a valid email address.';
-    return;
-  }
-
-  const btn = document.getElementById('emailBtn');
-  btn.disabled = true;
-  btn.textContent = 'Verifying...';
-
-  try {
-    const resp = await fetch('/api/unlock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, scanId: currentScanId, override }),
-    });
-    const data = await resp.json();
-
-    if (data.status === 'unlocked') {
-      window.location.href = data.reportUrl;
-      return;
-    }
-
-    if (data.status === 'team_auth') {
-      document.getElementById('emailStatus').textContent = '';
-      document.getElementById('overridePrompt').classList.remove('show');
-      document.getElementById('teamPrompt').classList.add('show');
-      document.getElementById('teamPassInput').focus();
-    }
-
-    if (data.status === 'team_auth_failed') {
-      document.getElementById('teamStatus').className = 'email-status error';
-      document.getElementById('teamStatus').textContent = 'Incorrect team password.';
-    }
-
-    if (data.status === 'domain_mismatch') {
-      document.getElementById('emailStatus').className = 'email-status error';
-      document.getElementById('emailStatus').textContent = data.message;
-      if (data.canOverride) {
-        document.getElementById('overrideMsg').textContent = data.message + ' You can override this once if you have permission to access this report.';
-        document.getElementById('overridePrompt').classList.add('show');
-      }
-    }
-
-  } catch (err) {
-    document.getElementById('emailStatus').className = 'email-status error';
-    document.getElementById('emailStatus').textContent = 'Something went wrong. Try again.';
-  }
-
-  btn.disabled = false;
-  btn.textContent = 'Get Report';
-}
-
-// ===== TEAM PASSWORD =====
-async function submitTeamPass() {
-  const email = document.getElementById('emailInput').value.trim();
-  const teamPassword = document.getElementById('teamPassInput').value;
-  if (!teamPassword) return;
-
-  try {
-    const resp = await fetch('/api/unlock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, scanId: currentScanId, teamPassword }),
-    });
-    const data = await resp.json();
-
-    if (data.status === 'unlocked') {
-      window.location.href = data.reportUrl;
-      return;
-    }
-    if (data.status === 'team_auth_failed') {
-      document.getElementById('teamStatus').className = 'email-status error';
-      document.getElementById('teamStatus').textContent = 'Incorrect team password.';
-    }
-  } catch (err) {
-    document.getElementById('teamStatus').className = 'email-status error';
-    document.getElementById('teamStatus').textContent = 'Something went wrong.';
-  }
-}
-
 </script>
 </body>
 </html>

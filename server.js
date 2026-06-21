@@ -3,6 +3,8 @@ const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
 const { fullScan, quickScan, checkWpExposure } = require('./lib/scanner');
 const db = require('./lib/db');
 
@@ -72,6 +74,129 @@ function safeEqual(a, b) {
   const bb = Buffer.from(String(b));
   if (ab.length !== bb.length) return false;
   return crypto.timingSafeEqual(ab, bb);
+}
+
+// ============================================================
+// ACCESS GATING — strict email/domain match + allowlist + monthly cap
+// ============================================================
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const SUPPORT_EMAIL = 'support@wintechpartners.com';
+const FREE_SCANS_PER_MONTH = parseInt(process.env.FREE_SCANS_PER_MONTH || '10', 10);
+// Emails that may deep-scan ANY domain and are exempt from the monthly cap.
+const ALLOWED_EMAILS = new Set(
+  String(process.env.ALLOWED_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+);
+
+function emailDomainOf(email) { return String(email || '').split('@')[1]?.toLowerCase() || ''; }
+function isAllowedEmail(email) { return ALLOWED_EMAILS.has(String(email || '').trim().toLowerCase()); }
+function domainMatches(emailDomain, scannedDomain) {
+  if (!emailDomain || !scannedDomain) return false;
+  const d = String(scannedDomain).toLowerCase().replace(/^www\./, '');
+  return emailDomain === d || d.endsWith('.' + emailDomain); // exact, or site is a subdomain of the email's domain
+}
+
+// Shared gate for any deep unlock (website report or audience "why").
+// Returns { ok:true, allowed } or { ok:false, status, message }.
+async function gateAccess(email, scannedDomain) {
+  email = String(email || '').trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return { ok: false, status: 'invalid_email', message: 'Please enter a valid email address.' };
+  const allowed = isAllowedEmail(email);
+  if (!allowed && !domainMatches(emailDomainOf(email), scannedDomain)) {
+    return { ok: false, status: 'domain_mismatch',
+      message: `To unlock the full report, use an email at ${String(scannedDomain).replace(/^www\./, '')}. Need help? Email ${SUPPORT_EMAIL}.` };
+  }
+  if (!allowed) {
+    const used = await db.scanCountThisMonth(email);
+    if (used >= FREE_SCANS_PER_MONTH) {
+      return { ok: false, status: 'limit_reached',
+        message: `You've reached the free limit of ${FREE_SCANS_PER_MONTH} scans this month. Email ${SUPPORT_EMAIL} to lift it.` };
+    }
+  }
+  return { ok: true, allowed };
+}
+
+// ============================================================
+// AUDIENCE INTEL — 3-model ensemble via OpenRouter (cheap GPT + Gemini + Claude)
+// ============================================================
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+// Three independently-configurable models (set each on Railway). Model 1 also powers the free
+// single-model "short" read. Defaults to a cheap GPT + Gemini + Claude.
+const AUDIENCE_MODELS = [
+  process.env.AUDIENCE_MODEL_1 || 'openai/gpt-4o-mini',
+  process.env.AUDIENCE_MODEL_2 || 'google/gemini-2.0-flash-001',
+  process.env.AUDIENCE_MODEL_3 || 'anthropic/claude-3.5-haiku',
+].map((s) => String(s).trim()).filter(Boolean);
+
+function audSimpleHash(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; } return h.toString(36); }
+
+async function fetchPageText(url) {
+  const u = url.startsWith('http') ? url : 'https://' + url;
+  const resp = await fetch(u, { timeout: 15000, redirect: 'follow', headers: { 'User-Agent': 'WinTech-Audience-Intel/1.0' } });
+  const body = await resp.text();
+  const $ = cheerio.load(body);
+  $('script,style,noscript,svg').remove();
+  const title = $('title').first().text().trim();
+  const desc = $('meta[name="description"]').attr('content') || '';
+  const h1 = $('h1').map((_, e) => $(e).text().trim()).get().join(' | ');
+  const ctas = $('a,button').map((_, e) => $(e).text().replace(/\s+/g, ' ').trim()).get()
+    .filter(t => t && t.length <= 40).slice(0, 30).join(' · ');
+  const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 6000);
+  const domain = new URL(u).hostname.toLowerCase();
+  return { domain, url: u, title, desc, h1, ctas, text, contentHash: audSimpleHash(title + desc + text) };
+}
+
+const AUDIENCE_PROMPT =
+  'You analyze a website homepage to judge whether its target audience and its goal are clear and in sync. ' +
+  'Reply with ONLY a JSON object: {"audience": string (1-2 sentences: who this site is for), ' +
+  '"goal": string (the single primary action the site wants a visitor to take), ' +
+  '"cta": string (the main call-to-action wording you actually see, or "none found"), ' +
+  '"alignment": "aligned" | "partial" | "mismatch", ' +
+  '"why": string (2-3 sentences of evidence from the page)}. Be concrete and cite evidence. If audience or goal is unclear, say so.';
+
+function audienceUserContent(p) {
+  return `URL: ${p.url}\nTitle: ${p.title}\nMeta description: ${p.desc}\nH1: ${p.h1}\nButtons/links: ${p.ctas}\n\nPage text:\n${p.text}`;
+}
+
+async function callModel(model, content) {
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST', timeout: 30000,
+    headers: { 'Authorization': 'Bearer ' + OPENROUTER_API_KEY, 'Content-Type': 'application/json',
+               'HTTP-Referer': 'https://wintechpartners.com', 'X-Title': 'WinTech Audience Intel' },
+    body: JSON.stringify({ model, temperature: 0.2, response_format: { type: 'json_object' },
+      messages: [{ role: 'system', content: AUDIENCE_PROMPT }, { role: 'user', content }] }),
+  });
+  const j = await resp.json();
+  const txt = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '';
+  let parsed; try { parsed = JSON.parse(txt); } catch { const m = String(txt).match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : {}; }
+  return { model, ...parsed };
+}
+
+async function audienceShort(p) {
+  const r = await callModel(AUDIENCE_MODELS[0], audienceUserContent(p));
+  return { audience: r.audience || '', goal: r.goal || '', cta: r.cta || '', alignment: r.alignment || '' };
+}
+
+async function audienceDeep(p) {
+  const content = audienceUserContent(p);
+  const results = await Promise.allSettled(AUDIENCE_MODELS.map((m) => callModel(m, content)));
+  const models = results.filter((r) => r.status === 'fulfilled').map((r) => r.value)
+    .map((m) => ({ model: m.model, audience: m.audience || '', goal: m.goal || '', cta: m.cta || '', alignment: m.alignment || '', why: m.why || '' }));
+  return reconcileAudience(models);
+}
+
+// Pure: turn N model reads into a headline + an agreement ("positioning clarity") signal.
+function reconcileAudience(models) {
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter((w) => w.length > 3);
+  const overlap = (a, b) => { const A = new Set(norm(a)); const B = norm(b); if (!A.size || !B.length) return 0; return B.filter((w) => A.has(w)).length / Math.max(A.size, B.length); };
+  let agree = 0, pairs = 0;
+  for (let i = 0; i < models.length; i++) for (let j = i + 1; j < models.length; j++) { agree += overlap(models[i].audience, models[j].audience); pairs++; }
+  const agreement = pairs ? agree / pairs : 1;
+  const clarity = agreement >= 0.45 ? 'clear' : agreement >= 0.2 ? 'mixed' : 'ambiguous';
+  const headline = models[0] || {};
+  const counts = {};
+  models.forEach((m) => { if (m.alignment) counts[m.alignment] = (counts[m.alignment] || 0) + 1; });
+  const alignment = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || headline.alignment || '';
+  return { headline: { audience: headline.audience, goal: headline.goal, cta: headline.cta, alignment }, clarity, agreement: Math.round(agreement * 100), models };
 }
 
 
@@ -171,63 +296,22 @@ app.post('/api/scan', async (req, res) => {
 // ============================================================
 
 app.post('/api/unlock', async (req, res) => {
-  const { email, scanId, override, teamPassword } = req.body;
+  const { email, scanId } = req.body || {};
   if (!email || !scanId) return res.status(400).json({ error: 'Email and scanId required' });
 
   try {
     const scan = await db.getScanById(scanId);
     if (!scan) return res.status(404).json({ error: 'Scan not found' });
 
-    // Get the scanned domain
     const siteResult = await db.pool.query('SELECT domain FROM sites WHERE id = $1', [scan.site_id]);
-    const scannedDomain = siteResult.rows[0]?.domain || '';
+    const scannedDomain = (siteResult.rows[0]?.domain || '').toLowerCase();
 
-    const emailDomain = email.split('@')[1]?.toLowerCase() || '';
+    // Strict: email must match the scanned domain, unless it's an allowlisted address.
+    const gate = await gateAccess(email, scannedDomain);
+    if (!gate.ok) return res.status(403).json(gate);
 
-    // WinTech team bypass: wintechpartners.com emails get access to any report with team password
-    if (emailDomain === 'wintechpartners.com') {
-      if (!teamPassword) {
-        return res.json({
-          status: 'team_auth',
-          message: 'WinTech team member detected. Enter your team password.',
-        });
-      }
-      if (!process.env.TEAM_PASSWORD || !safeEqual(teamPassword, process.env.TEAM_PASSWORD)) {
-        return res.json({
-          status: 'team_auth_failed',
-          message: 'Incorrect team password.',
-        });
-      }
-      // Team auth passed — grant access
-      await db.saveLead(email, scannedDomain, scan.site_id, false);
-      return res.json({ status: 'unlocked', reportUrl: `/report/${scan.id}` });
-    }
-
-    // Normal flow: validate email domain matches scanned domain
-    const freeEmailDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com'];
-    const isFreeEmail = freeEmailDomains.includes(emailDomain);
-    const domainMatch = emailDomain === scannedDomain || scannedDomain.endsWith('.' + emailDomain) || emailDomain.endsWith('.' + scannedDomain);
-
-    if (!domainMatch && !override) {
-      const reason = isFreeEmail
-        ? `Please use a work email from ${scannedDomain} to access the full report.`
-        : `Email domain "${emailDomain}" doesn't match the scanned site "${scannedDomain}".`;
-
-      return res.json({
-        status: 'domain_mismatch',
-        message: reason,
-        scannedDomain,
-        canOverride: true,
-      });
-    }
-
-    // Save lead
-    await db.saveLead(email, scannedDomain, scan.site_id, !!override);
-
-    res.json({
-      status: 'unlocked',
-      reportUrl: `/report/${scan.id}`,
-    });
+    await db.recordScanHistory({ email, domain: scannedDomain, kind: 'website', scanId: scan.id });
+    return res.json({ status: 'unlocked', reportUrl: `/report/${scan.id}` });
 
   } catch (err) {
     console.error('[UNLOCK ERROR]', err);
@@ -302,6 +386,62 @@ app.post('/api/compare', async (req, res) => {
 // Serve the comparison page at a clean URL
 app.get('/compare', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'compare.html'));
+});
+
+
+// ============================================================
+// API: AUDIENCE INTEL  (free short read; deep "why" gated by matching email)
+// ============================================================
+app.post('/api/audience', async (req, res) => {
+  const { url, deep, email } = req.body || {};
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+  if (!OPENROUTER_API_KEY) return res.status(503).json({ error: 'Audience Intel is not configured yet. Set OPENROUTER_API_KEY.' });
+
+  try {
+    const p = await fetchPageText(url);
+
+    if (!deep) {
+      // Free single-model read. Cache by domain+content so repeat views are free.
+      const cached = await db.getLatestAudience(p.domain);
+      let short;
+      if (cached && cached.content_hash === p.contentHash && cached.result && cached.result.short) {
+        short = cached.result.short;
+      } else {
+        short = await audienceShort(p);
+        await db.saveAudienceReport({ domain: p.domain, url: p.url, contentHash: p.contentHash, result: { short } });
+      }
+      return res.json({ status: 'short', domain: p.domain, audience: short.audience, goal: short.goal, cta: short.cta });
+    }
+
+    // Deep "why" — gated by the same strict email rules as the website report.
+    const gate = await gateAccess(email, p.domain);
+    if (!gate.ok) return res.status(403).json(gate);
+
+    const deepResult = await audienceDeep(p);
+    const rec = await db.saveAudienceReport({ domain: p.domain, url: p.url, contentHash: p.contentHash, result: { short: deepResult.headline, deep: deepResult } });
+    await db.recordScanHistory({ email, domain: p.domain, kind: 'audience', audienceId: rec.id });
+    return res.json({ status: 'deep', domain: p.domain, ...deepResult });
+
+  } catch (err) {
+    console.error('[AUDIENCE ERROR]', err);
+    return res.status(500).json({ error: 'Audience analysis failed: ' + err.message });
+  }
+});
+
+
+// ============================================================
+// API: SCAN HISTORY  (open-by-email, v1)
+// ============================================================
+app.get('/api/history', async (req, res) => {
+  const email = String(req.query.email || '').trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'A valid email is required.' });
+  try {
+    const history = await db.getHistoryByEmail(email, 100);
+    const used = await db.scanCountThisMonth(email);
+    res.json({ email, used, limit: isAllowedEmail(email) ? null : FREE_SCANS_PER_MONTH, history });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
