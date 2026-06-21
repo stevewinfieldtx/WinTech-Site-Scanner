@@ -125,7 +125,7 @@
 
   const securityInsight = insight(
     `<p style="margin-bottom:12px"><strong>${(sh.headersSet || 0) === 0 ? 'Zero security headers is a credibility problem, not just a technical one.' : `${sh.headersSet} of ${sh.headersTotal} security headers are configured.`}</strong> ${(sh.headersSet || 0) < 3 ? 'B2B buyers increasingly run security evaluations on vendors before engaging. Security-conscious prospects — especially in enterprise, financial services, and healthcare — will notice missing headers in their due diligence. This can silently disqualify you before a conversation starts.' : 'Your header configuration is reasonable. Focus on adding any missing headers and ensuring your Observatory score reflects the full picture.'}</p>` +
-    `<p>${ssl.valid ? 'SSL is active and valid, which is the baseline expectation.' : 'SSL issues are a critical fix — browsers will show warning pages that destroy visitor trust immediately.'} ${obsGrade && !['N/A', 'Pending'].includes(obsGrade) ? `Mozilla Observatory grades you at ${obsGrade}. ${['A+','A','B+','B'].includes(obsGrade) ? 'This is a strong security posture.' : ['C+','C'].includes(obsGrade) ? 'This is middling — enough to pass basic checks but room to improve.' : 'This grade will concern security-aware buyers. Addressing the failing Observatory checks should be a priority.'}` : 'Mozilla Observatory results were not available for this scan.'}</p>`
+    `<p>${ssl.valid ? 'SSL is active and valid, which is the baseline expectation.' : 'SSL issues are a critical fix — browsers will show warning pages that destroy visitor trust immediately.'} ${obsGrade && !['N/A', 'Pending'].includes(obsGrade) ? `${obs.source === 'computed' ? 'Based on the security headers present, this site grades' : 'Mozilla Observatory grades this site'} ${obsGrade}. ${/^[AB]/.test(obsGrade) ? 'This is a strong posture.' : /^C/.test(obsGrade) ? 'This is middling — enough to pass basic checks but room to improve.' : 'This grade will concern security-aware buyers. Adding the missing headers is the fastest way to raise it.'}` : 'A security grade was not available for this scan.'}</p>`
   );
 
   // Score ring SVG
@@ -419,7 +419,7 @@
     <div class="pnl" id="p-security">
       <div class="sec"><h2>Security & Privacy</h2><p>Headers, SSL, and Mozilla Observatory results</p></div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
-        ${stat('Observatory', obsGrade, ['A+','A','B+','B'].includes(obsGrade) ? '#22c55e' : ['C+','C'].includes(obsGrade) ? '#f59e0b' : '#ef4444', obs.score !== undefined ? `Score: ${obs.score}/100` : '')}
+        ${stat(obs.source === 'computed' ? 'Security Grade' : 'Observatory', obsGrade, /^A/.test(obsGrade) ? '#22c55e' : /^B/.test(obsGrade) ? '#84cc16' : /^C/.test(obsGrade) ? '#f59e0b' : '#ef4444', (obs.score !== undefined && obs.score !== null) ? `${obs.source === 'computed' ? 'Header-based' : 'Mozilla'} · ${obs.score}/100` : '')}
         ${stat('Headers Set', `${sh.headersSet || 0} / ${sh.headersTotal || 7}`, (sh.headersSet || 0) >= 5 ? '#22c55e' : '#ef4444', '')}
         ${stat('SSL', ssl.valid ? (ssl.grade || 'Valid') : 'Invalid', ssl.valid ? '#22c55e' : '#ef4444', ssl.valid ? 'Certificate active' : ssl.error || '')}
       </div>
