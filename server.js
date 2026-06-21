@@ -199,6 +199,53 @@ function reconcileAudience(models) {
   return { headline: { audience: headline.audience, goal: headline.goal, cta: headline.cta, alignment }, clarity, agreement: Math.round(agreement * 100), models };
 }
 
+// ============================================================
+// EMAIL DELIVERY — Resend HTTP API (no SDK dependency). Set RESEND_API_KEY.
+// ============================================================
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'WinTech Site Scanner <noreply@wintechpartners.com>';
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function sendEmail(to, subject, html) {
+  if (!RESEND_API_KEY) return false;
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+    });
+    if (!r.ok) { console.error('[EMAIL] Resend failed', r.status, await r.text().catch(() => '')); return false; }
+    return true;
+  } catch (e) { console.error('[EMAIL] error', e.message); return false; }
+}
+function absBase(req) {
+  return (req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')) + '://' + req.headers.host;
+}
+function emailShell(inner) {
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0f172a">
+    <div style="background:#0f172a;border-radius:12px 12px 0 0;padding:20px 24px"><span style="color:#a5b4fc;font-weight:700;letter-spacing:1px;font-size:13px">WINTECH SITE SCANNER</span></div>
+    <div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:24px">${inner}
+    <p style="margin-top:20px;color:#94a3b8;font-size:12px">Questions? Reply to this email or contact ${SUPPORT_EMAIL}.</p></div></div>`;
+}
+function websiteEmailHtml(domain, link) {
+  return emailShell(`<h2 style="margin:0 0 8px">Your website audit is ready</h2>
+    <p style="color:#475569">Here's the full Website Intelligence report for <strong>${esc(domain)}</strong> — 11 dimensions, prioritized findings, security, and revenue impact.</p>
+    <p style="margin:18px 0"><a href="${esc(link)}" style="background:#6366f1;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open your report</a></p>
+    <p style="color:#94a3b8;font-size:13px">Tip: use the "Download PDF" button on the report to save or send a copy.</p>`);
+}
+function audienceEmailHtml(domain, d) {
+  const models = (d.models || []).map((m) => `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px">
+    <div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase">${esc((m.model || '').split('/').pop())}</div>
+    <div style="font-size:13px"><strong>For:</strong> ${esc(m.audience)}</div>
+    <div style="font-size:13px"><strong>Goal:</strong> ${esc(m.goal)}</div>
+    <div style="font-size:13px;color:#475569"><strong>Why:</strong> ${esc(m.why)}</div></div>`).join('');
+  return emailShell(`<h2 style="margin:0 0 8px">Audience analysis — ${esc(domain)}</h2>
+    <p style="color:#475569"><strong>Who it's for:</strong> ${esc(d.headline && d.headline.audience)}</p>
+    <p style="color:#475569"><strong>What it wants them to do:</strong> ${esc(d.headline && d.headline.goal)}</p>
+    <p style="color:#475569"><strong>Positioning clarity:</strong> ${esc(d.clarity)} · ${d.agreement}% model agreement</p>
+    <p style="margin:16px 0 8px;font-weight:700">How GPT, Gemini, and Claude each read it:</p>${models}`);
+}
+
 
 // ============================================================
 // API: SCAN A SITE
@@ -311,7 +358,9 @@ app.post('/api/unlock', async (req, res) => {
     if (!gate.ok) return res.status(403).json(gate);
 
     await db.recordScanHistory({ email, domain: scannedDomain, kind: 'website', scanId: scan.id });
-    return res.json({ status: 'unlocked', reportUrl: `/report/${scan.id}` });
+    const reportUrl = `/report/${scan.id}`;
+    const emailed = await sendEmail(email, `Your website audit — ${scannedDomain}`, websiteEmailHtml(scannedDomain, absBase(req) + reportUrl));
+    return res.json({ status: 'unlocked', reportUrl, emailed });
 
   } catch (err) {
     console.error('[UNLOCK ERROR]', err);
@@ -420,7 +469,8 @@ app.post('/api/audience', async (req, res) => {
     const deepResult = await audienceDeep(p);
     const rec = await db.saveAudienceReport({ domain: p.domain, url: p.url, contentHash: p.contentHash, result: { short: deepResult.headline, deep: deepResult } });
     await db.recordScanHistory({ email, domain: p.domain, kind: 'audience', audienceId: rec.id });
-    return res.json({ status: 'deep', domain: p.domain, ...deepResult });
+    const emailed = await sendEmail(email, `Your audience analysis — ${p.domain}`, audienceEmailHtml(p.domain, deepResult));
+    return res.json({ status: 'deep', domain: p.domain, emailed, ...deepResult });
 
   } catch (err) {
     console.error('[AUDIENCE ERROR]', err);

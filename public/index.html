@@ -86,6 +86,10 @@
 </head>
 <body>
 
+<div style="max-width:720px;margin:0 auto;padding:18px 24px 0;text-align:right">
+  <a href="#" onclick="showHistory();return false" style="font-size:13px;font-weight:600;color:#94a3b8">📁 My scans</a>
+</div>
+
 <div class="hero">
   <div class="eyebrow">WinTech Site Scanner</div>
   <h1>Is your website built to win the customer you want?</h1>
@@ -136,6 +140,7 @@ async function run(mode){
   try {
     if(mode==='website' || mode==='both') await runWebsite(url);
     if(mode==='audience' || mode==='both') await runAudience(url);
+    renderGate();
     setStatus('');
     $('results').classList.add('show');
     $('results').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -160,7 +165,7 @@ async function runWebsite(url){
     '<text x="75" y="92" text-anchor="middle" fill="#94a3b8" font-size="12">/ 100</text>'+
     '<text x="75" y="110" text-anchor="middle" fill="'+col+'" font-size="15" font-weight="700">'+grade(o)+'</text></svg></div>'+
     '<div class="bars">'+bars+'</div></div>'+
-    gateHtml('web','Unlock the full 11-dimension report (findings, security, revenue impact).')+'</div>');
+    '<div id="webUnlocked"></div></div>');
 }
 
 async function runAudience(url){
@@ -173,34 +178,48 @@ async function runAudience(url){
     '<div class="aud-row"><div class="k">Who it appears to be for</div><div class="v">'+esc(data.audience||'—')+'</div></div>'+
     '<div class="aud-row"><div class="k">What it seems to want them to do</div><div class="v">'+esc(data.goal||'—')+'</div></div>'+
     '<div class="aud-row"><div class="k">Primary call-to-action</div><div class="v">'+esc(data.cta||'—')+'</div></div>'+
-    '<div id="audDeep"></div>'+
-    gateHtml('aud','Get the deeper read: WHY three different AIs concluded this, and whether they agree on who you are.')+'</div>');
+    '<div id="audDeep"></div></div>');
 }
 
-function gateHtml(which, blurb){
-  return '<div class="gate" id="gate-'+which+'"><p>'+blurb+' Enter a work email at the site\'s domain.</p>'+
-    '<div class="row"><input type="email" id="email-'+which+'" placeholder="you@yourcompany.com"><button onclick="unlock(\''+which+'\')">Unlock</button></div>'+
-    '<div class="msg" id="msg-'+which+'"></div></div>';
+// One shared email gate for whatever is pending (website report, audience deep, or both).
+function renderGate(){
+  if(!pending.scanId && !pending.audienceUrl) return;
+  const parts = [];
+  if(pending.scanId) parts.push('the full website report');
+  if(pending.audienceUrl) parts.push('the deeper audience analysis');
+  $('results').insertAdjacentHTML('beforeend',
+    '<div class="card" id="gateCard"><h2>Unlock '+parts.join(' and ')+'</h2>'+
+    '<p style="color:#94a3b8;font-size:14px;margin-bottom:14px">Enter a work email at the site\'s domain. We\'ll unlock it here and email it to you. Need help? <a href="mailto:support@wintechpartners.com">support@wintechpartners.com</a></p>'+
+    '<div style="display:flex;gap:8px"><input class="scan-input" type="email" id="gateEmail" placeholder="you@yourcompany.com" style="flex:1" onkeydown="if(event.key===\'Enter\')unlockAll()">'+
+    '<button onclick="unlockAll()" style="padding:13px 26px;font-size:14px;font-weight:700;border-radius:10px;border:none;background:#22c55e;color:#fff;cursor:pointer;white-space:nowrap">Unlock</button></div>'+
+    '<div id="gateMsg" style="margin-top:10px;font-size:13px;min-height:18px;color:#64748b"></div></div>');
 }
 
-async function unlock(which){
-  const email = ($('email-'+which).value||'').trim();
-  const msg = $('msg-'+which);
-  if(!email || !email.includes('@')){ msg.className='msg error'; msg.textContent='Enter a valid email.'; return; }
-  msg.className='msg'; msg.textContent='Verifying…';
+async function unlockAll(){
+  const email = ($('gateEmail').value||'').trim();
+  const msg = $('gateMsg');
+  if(!email || !email.includes('@')){ msg.style.color='#ef4444'; msg.textContent='Enter a valid email.'; return; }
+  msg.style.color='#64748b'; msg.textContent='Verifying…';
+  let gateErr = null, emailed = false;
   try {
-    if(which==='web'){
+    if(pending.scanId){
       const r = await fetch('/api/unlock', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, scanId: pending.scanId }) });
       const d = await r.json();
-      if(d.status==='unlocked'){ window.location.href = d.reportUrl; return; }
-      msg.className='msg error'; msg.textContent = d.message || d.error || 'Could not unlock.';
-    } else {
+      if(d.status==='unlocked'){ emailed = emailed || !!d.emailed;
+        $('webUnlocked').innerHTML = '<div class="gate" style="border-top:1px solid #1e293b"><a href="'+d.reportUrl+'" style="background:#6366f1;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open full report →</a> <span style="color:#64748b;font-size:13px">(Download PDF from the report page.)</span></div>';
+        pending.scanId=null; }
+      else { gateErr = d.message || d.error || 'Could not unlock.'; }
+    }
+    if(!gateErr && pending.audienceUrl){
       const r = await fetch('/api/audience', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: pending.audienceUrl, deep:true, email }) });
       const d = await r.json();
-      if(d.status==='deep'){ renderDeepAudience(d); $('gate-aud').style.display='none'; return; }
-      msg.className='msg error'; msg.textContent = d.message || d.error || 'Could not unlock.';
+      if(d.status==='deep'){ emailed = emailed || !!d.emailed; renderDeepAudience(d); pending.audienceUrl=null; }
+      else { gateErr = d.message || d.error || 'Could not unlock.'; }
     }
-  } catch(e){ msg.className='msg error'; msg.textContent='Something went wrong. Try again.'; }
+  } catch(e){ gateErr = 'Something went wrong. Try again.'; }
+  if(gateErr){ msg.style.color='#ef4444'; msg.textContent = gateErr; return; }
+  const gc = $('gateCard');
+  if(gc) gc.outerHTML = '<p style="text-align:center;color:#22c55e;font-size:13px;margin:4px 0 22px">'+(emailed?('Unlocked — and emailed to '+esc(email)+'.'):'Unlocked here. (Set RESEND_API_KEY to also email it.)')+'</p>';
 }
 
 function renderDeepAudience(d){
