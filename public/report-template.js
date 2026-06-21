@@ -494,16 +494,42 @@
     .dl-btn { position:fixed; bottom:24px; right:24px; padding:14px 24px; font-size:14px; font-weight:700; border-radius:12px; border:none; background:#6366f1; color:#fff; cursor:pointer; font-family:Inter,sans-serif; box-shadow:0 4px 20px #6366f144; z-index:20; transition:background 0.2s; }
     .dl-btn:hover { background:#4f46e5; }
     @media print {
+      @page { margin: 13mm 12mm; }
       .dl-btn { display:none !important; }
       .tabs { display:none !important; }
-      /* Default (Download PDF): print the FULL report — the three cross-cutting panels —
-         and hide the per-dimension drill-downs so content isn't duplicated 11x. */
+      /* Default (Download PDF): the three cross-cutting panels; per-dimension drill-downs hidden.
+         NOTE: no page-break-inside:avoid on the big panels — that was forcing each onto its own
+         page and leaving huge blank gaps. Content now flows naturally. */
       .pnl { display:none !important; }
-      .main-pnl { display:block !important; page-break-inside:avoid; }
-      /* Single-view mode (a dimension's "Print this page" button): only the active panel. */
+      .main-pnl { display:block !important; }
       body.print-single .main-pnl { display:none !important; }
-      body.print-single .pnl.active { display:block !important; page-break-inside:avoid; }
-      body { background:#020617; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      body.print-single .pnl.active { display:block !important; }
+
+      /* ---- Clean, ink-friendly LIGHT theme for the printed / PDF version ---- */
+      html, body { background:#ffffff !important; color:#111827 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .hdr { background:#ffffff !important; border-bottom:2px solid #4f46e5 !important; padding:0 0 12px 0 !important; margin-bottom:6px !important; }
+      .hdr h1 { -webkit-text-fill-color:#1e1b4b !important; color:#1e1b4b !important; background:none !important; }
+      .cnt { padding:0 !important; max-width:none !important; }
+      .sec { margin-top:22px !important; }
+      .sec h2 { color:#111827 !important; }
+      .sec p { color:#6b7280 !important; }
+      .foot p { color:#6b7280 !important; }
+
+      /* dark surfaces -> white cards with light borders */
+      [style*="#0f172a"], [style*="#1e1b4b"], [style*="#020617"] { background:#ffffff !important; }
+      [style*="#1e293b"] { background:#eef1f6 !important; border-color:#e5e7eb !important; }
+      .panel, .cl, .fl { background:#ffffff !important; border:1px solid #e5e7eb !important; }
+
+      /* light-on-dark text -> dark-on-light (so nothing prints invisibly) */
+      [style*="#e2e8f0"], [style*="#f1f5f9"] { color:#111827 !important; }
+      [style*="#cbd5e1"] { color:#374151 !important; }
+      [style*="#94a3b8"], [style*="#64748b"], [style*="#475569"] { color:#4b5563 !important; }
+      [style*="#a5b4fc"] { color:#4338ca !important; }
+      [style*="#fcd34d"] { color:#92400e !important; }
+      [style*="#86efac"] { color:#15803d !important; }
+
+      /* keep small blocks from splitting awkwardly across page breaks */
+      .panel, .cl, .sec, .fl > div { page-break-inside:avoid; }
     }
   </style>
 
