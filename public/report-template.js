@@ -171,6 +171,21 @@
     </div>
   `).join('');
 
+  // Strengths ("what you're doing well") — the positive counterpart to findings.
+  const wins = (data && data.wins) || [];
+  const winsHtml = wins.length ? wins.map((w) => `
+    <div style="border-bottom:1px solid #1e293b">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;flex-wrap:wrap">
+        <span style="font-size:14px;color:#22c55e;width:24px;text-align:center">✓</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:#22c55e22;color:#22c55e">Strength</span>
+        <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:#1e293b;color:#94a3b8">${w.cat}</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#e2e8f0;min-width:150px">${w.headline}</span>
+        <span style="font-size:16px;color:#64748b">▾</span>
+      </div>
+      <div style="display:none;padding:0 16px 14px 52px;font-size:13px;color:#94a3b8;line-height:1.6">${w.desc}</div>
+    </div>
+  `).join('') : '<div style="padding:16px;color:#64748b;font-size:13px">No standout strengths surfaced on this scan — the findings below are the place to start.</div>';
+
   // SEO checks
   const seoChecks = [
     chk('Title Tag',
@@ -332,22 +347,25 @@
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:32px">
         ${stat('Critical Issues', criticalCount, '#ef4444', 'Require immediate action')}
+        ${stat('Strengths', wins.length, '#22c55e', 'Things done right')}
         ${stat('Total Findings', findings.length, '#f59e0b', 'Across all categories')}
         ${stat('TTFB', (perf.ttfb || '?') + 'ms', perf.ttfb && perf.ttfb < 200 ? '#22c55e' : '#f59e0b', 'Time to first byte')}
         ${stat('Page Words', seo.wordCount || '?', seo.wordCount >= 800 ? '#22c55e' : '#ef4444', 'Target: 800+')}
       </div>
       <div class="sec"><h2>Executive Summary</h2></div>
       <div class="panel">
-        <p>This audit analyzed <strong>${domain}</strong> across 6 categories: technical performance, SEO fundamentals, AI/AEO readiness, security, trust signals, and content quality.</p>
+        <p>This audit analyzed <strong>${domain}</strong> across ${Object.keys(cats).length} dimensions: ${Object.values(cats).map(c => c.name).join(', ')}.</p>
         <p>The site scored <strong style="color:${ringColor}">${overall}/100 (${gr(overall)})</strong>. ${overall < 40 ? 'This score indicates significant issues that are likely costing the business organic traffic, AI visibility, and lead generation.' : overall < 70 ? 'This score indicates room for improvement across multiple categories.' : 'This is a solid foundation with targeted improvements available.'}</p>
-        <p><strong>${criticalCount} critical issues</strong> were found that require immediate attention. ${findings.length} total findings were identified across the scan.</p>
+        <p>We identified <strong style="color:#22c55e">${wins.length} thing${wins.length === 1 ? '' : 's'} this site already does well</strong> alongside <strong>${findings.length} finding${findings.length === 1 ? '' : 's'}</strong> to address${criticalCount > 0 ? `, ${criticalCount} of them critical` : ''}.</p>
       </div>
       ${overviewInsight}
     </div>
 
     <!-- FINDINGS -->
     <div class="pnl" id="p-findings">
-      <div class="sec"><h2>All Findings</h2><p>${findings.length} issues found — click to expand</p></div>
+      <div class="sec"><h2>What You're Doing Well</h2><p>${wins.length} strength${wins.length === 1 ? '' : 's'} detected — credit where it's due</p></div>
+      <div class="fl" style="border-left:3px solid #22c55e">${winsHtml}</div>
+      <div class="sec" style="margin-top:28px"><h2>All Findings</h2><p>${findings.length} issue${findings.length === 1 ? '' : 's'} found — click to expand</p></div>
       <div class="fl">${findingsHtml}</div>
       ${findingsInsight}
     </div>
