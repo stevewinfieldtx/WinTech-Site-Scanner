@@ -200,6 +200,68 @@ function reconcileAudience(models) {
 }
 
 // ============================================================
+// WINTECH INSIGHTS — one batched LLM call explains all 11 dimension scores in plain English.
+// Generated at scan time and stored in scan_data so every drill-down is instant. Falls back to
+// null (the report then uses rule-based text) if no key is set or the call fails — scans never
+// fail because of this.
+// ============================================================
+const INSIGHT_MODEL = process.env.INSIGHT_MODEL || AUDIENCE_MODELS[0] || 'openai/gpt-4o-mini';
+// Maps a scorecard dimension key to the finding/strength category label used elsewhere.
+const DIM_CAT = {
+  seo: 'SEO', aeo: 'AEO', performance: 'Performance', security: 'Security',
+  accessibility: 'Accessibility', content: 'Content', trust: 'Trust',
+  bestPractices: 'Best Practices', privacy: 'Privacy', i18n: 'Localization', analytics: 'Analytics',
+};
+
+const INSIGHT_PROMPT =
+  'You are a senior web strategist writing for a small-business owner who is not technical. ' +
+  'For EACH website dimension provided, write 2-3 short plain-English sentences that explain WHY it earned that score, ' +
+  'what it means for getting found and winning customers, and the single most valuable next step. ' +
+  'Be concrete and reference the specific issues/strengths given. Encouraging but honest; no jargon, no fluff, no markdown. ' +
+  'Reply with ONLY a JSON object whose keys are EXACTLY the dimension keys given and whose values are the insight strings.';
+
+function insightUserContent(scanData) {
+  const cats = (scanData.scores && scanData.scores.categories) || {};
+  const findings = scanData.findings || [];
+  const wins = scanData.wins || [];
+  const lines = Object.keys(cats).map((key) => {
+    const c = cats[key];
+    const cat = DIM_CAT[key] || c.name;
+    const iss = findings.filter((f) => f.cat === cat).map((f) => f.issue).slice(0, 5);
+    const str = wins.filter((w) => w.cat === cat).map((w) => w.headline).slice(0, 3);
+    return `- ${key} ("${c.name}") scored ${c.score}/100.` +
+      (iss.length ? ` Issues: ${iss.join('; ')}.` : '') +
+      (str.length ? ` Strengths: ${str.join('; ')}.` : (iss.length ? '' : ' No problems detected.'));
+  });
+  return `Site: ${scanData.domain} (overall ${scanData.scores && scanData.scores.overall}/100).\n` +
+    `Write one insight per dimension. Use these exact keys: ${Object.keys(cats).join(', ')}.\n\n` +
+    lines.join('\n');
+}
+
+async function generateDimensionInsights(scanData) {
+  if (!OPENROUTER_API_KEY) return null;
+  try {
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST', timeout: 30000,
+      headers: { 'Authorization': 'Bearer ' + OPENROUTER_API_KEY, 'Content-Type': 'application/json',
+                 'HTTP-Referer': 'https://wintechpartners.com', 'X-Title': 'WinTech Insights' },
+      body: JSON.stringify({ model: INSIGHT_MODEL, temperature: 0.3, response_format: { type: 'json_object' },
+        messages: [{ role: 'system', content: INSIGHT_PROMPT }, { role: 'user', content: insightUserContent(scanData) }] }),
+    });
+    const j = await resp.json();
+    const txt = (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+    let parsed; try { parsed = JSON.parse(txt); } catch { const m = String(txt).match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
+    if (!parsed || typeof parsed !== 'object') return null;
+    // Keep only string values for known dimension keys.
+    const out = {};
+    Object.keys((scanData.scores && scanData.scores.categories) || {}).forEach((k) => {
+      if (typeof parsed[k] === 'string' && parsed[k].trim()) out[k] = parsed[k].trim();
+    });
+    return Object.keys(out).length ? { model: INSIGHT_MODEL, generatedAt: new Date().toISOString(), byDimension: out } : null;
+  } catch (e) { console.error('[INSIGHTS] generation failed', e.message); return null; }
+}
+
+// ============================================================
 // EMAIL DELIVERY — Resend HTTP API (no SDK dependency). Set RESEND_API_KEY.
 // ============================================================
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -316,6 +378,9 @@ app.post('/api/scan', async (req, res) => {
       const wpExp = await checkWpExposure(url);
       scanData.security.wpExposure = wpExp;
     }
+
+    // WinTech Insights — plain-English "why" for every dimension (one batched LLM call).
+    scanData.insights = await generateDimensionInsights(scanData);
 
     // Save to database
     const site = await db.upsertSite(domain, scanData.url, scanData.contentHash);

@@ -144,12 +144,12 @@
   </svg>`;
 
   // Category bars HTML
-  const catBars = Object.values(cats).map(c => {
+  const catBars = Object.entries(cats).map(([key, c]) => {
     const color = sc(c.score);
-    return `<div style="margin-bottom:14px">
+    return `<div onclick="showDim('${key}')" title="Open the deep-dive + WinTech Insights" style="margin:0 -8px 6px;padding:8px;border-radius:8px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="font-size:13px;font-weight:600;color:#e2e8f0">${c.icon} ${c.name}</span>
-        <span style="font-size:13px;font-weight:700;color:${color};font-family:'JetBrains Mono',monospace">${c.score}%</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700;color:${color};font-family:'JetBrains Mono',monospace">${c.score}%</span><span style="font-size:15px;color:#475569;font-weight:700">›</span></span>
       </div>
       <div style="height:8px;border-radius:4px;background:#1e293b;overflow:hidden">
         <div style="height:100%;width:${c.score}%;background:linear-gradient(90deg,${color}cc,${color});border-radius:4px"></div>
@@ -283,6 +283,130 @@
     chk('Privacy Policy', trust.hasPrivacyPolicy ? 'pass' : 'warn', trust.hasPrivacyPolicy ? 'Linked' : 'Missing'),
   ].join('');
 
+  // ============================================================
+  // WINTECH INSIGHTS — per-dimension drill-down (click any scorecard line)
+  // ============================================================
+  // Content has no standalone checklist — build one from the page's content signals.
+  const contentChecks = [
+    chk('Homepage Word Count', seo.wordCount >= 800 ? 'pass' : seo.wordCount >= 400 ? 'warn' : 'fail', `${seo.wordCount || 0} words. Target: 800+`),
+    chk('Image Alt Text', (seo.altText?.pct || 0) >= 90 ? 'pass' : (seo.altText?.pct || 0) >= 50 ? 'warn' : 'fail', `${seo.altText?.withAlt || 0} of ${seo.altText?.total || 0} images have alt text (${seo.altText?.pct || 0}%)`),
+    chk('Heading Hierarchy', seo.headingHierarchy ? 'pass' : 'fail', seo.headingHierarchy ? 'Proper H1→H2→H3 nesting' : 'Headings skip levels or no H1'),
+    chk('Title Tag', !seo.title?.value ? 'fail' : (seo.title.length >= 30 && seo.title.length <= 60) ? 'pass' : 'warn', `"${seo.title?.value || 'missing'}" — ${seo.title?.length || 0} chars`),
+  ].join('');
+
+  // Performance has no checklist — relocate the old Technical tab's stats + asset bars here.
+  const perfWhy = `
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      ${stat('TTFB', (perf.ttfb || '?') + 'ms', perf.ttfb && perf.ttfb < 200 ? '#22c55e' : '#f59e0b', 'Time to first byte')}
+      ${stat('Load Time', (perf.totalLoad || '?') + 'ms', perf.totalLoad && perf.totalLoad < 500 ? '#22c55e' : '#f59e0b', 'Total load')}
+      ${stat('Page Size', perf.pageSize ? Math.round(perf.pageSize / 1024) + 'KB' : '?', '#94a3b8', 'HTML only')}
+      ${stat('PageSpeed', psScores.performance !== undefined ? psScores.performance + '' : 'N/A', psScores.performance >= 80 ? '#22c55e' : psScores.performance >= 50 ? '#f59e0b' : '#ef4444', 'Mobile score')}
+    </div>
+    <h3 style="font-size:15px;font-weight:700;margin:18px 0 10px">Asset Inventory</h3>
+    ${bar([
+      { label: 'Stylesheets', value: perf.cssFiles || 0, color: '#6366f1' },
+      { label: 'Script Tags', value: perf.jsFiles || 0, color: '#f59e0b' },
+      { label: 'Blocking JS', value: perf.renderBlockingJs || 0, color: '#ef4444' },
+      { label: 'Images', value: perf.totalImages || 0, color: '#22c55e' },
+      { label: 'Lazy Loaded', value: perf.lazyLoadedImages || 0, color: perf.lazyLoadedImages > 0 ? '#22c55e' : '#ef4444' },
+    ])}
+    ${psScores.performance !== undefined ? `<h3 style="font-size:15px;font-weight:700;margin:18px 0 10px">Google PageSpeed Scores</h3>${bar([
+      { label: 'Performance', value: psScores.performance || 0, color: sc(psScores.performance || 0) },
+      { label: 'Accessibility', value: psScores.accessibility || 0, color: sc(psScores.accessibility || 0) },
+      { label: 'Best Practices', value: psScores['best-practices'] || 0, color: sc(psScores['best-practices'] || 0) },
+      { label: 'SEO', value: psScores.seo || 0, color: sc(psScores.seo || 0) },
+    ])}` : ''}`;
+
+  const secWhy = `
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      ${stat(obs.source === 'computed' ? 'Security Grade' : 'Observatory', obsGrade, /^A/.test(obsGrade) ? '#22c55e' : /^B/.test(obsGrade) ? '#84cc16' : /^C/.test(obsGrade) ? '#f59e0b' : '#ef4444', (obs.score !== undefined && obs.score !== null) ? `${obs.score}/100` : '')}
+      ${stat('Headers Set', `${sh.headersSet || 0} / ${sh.headersTotal || 7}`, (sh.headersSet || 0) >= 5 ? '#22c55e' : '#ef4444', '')}
+      ${stat('SSL', ssl.valid ? (ssl.grade || 'Valid') : 'Invalid', ssl.valid ? '#22c55e' : '#ef4444', ssl.valid ? 'Certificate active' : (ssl.error || ''))}
+    </div>
+    <div class="cl">${secChecks}</div>`;
+
+  const accWhy = `
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      ${stat('Score', (cats.accessibility?.score ?? '?') + '/100', sc(cats.accessibility?.score || 0), 'Weighted into overall')}
+      ${stat('Fields Labeled', accData.formFields ? `${accData.labeledFields}/${accData.formFields}` : 'n/a', (!accData.formFields || accData.labeledFields === accData.formFields) ? '#22c55e' : '#ef4444', 'Screen-reader critical')}
+      ${stat('Landmarks', accData.landmarks ?? 0, accData.landmarks > 0 ? '#22c55e' : '#ef4444', 'Navigation structure')}
+    </div>
+    <div class="cl">${a11yChecks}</div>`;
+
+  // dimension key -> finding/strength category label, and -> "why this score" detail HTML
+  const dimCat = { seo: 'SEO', aeo: 'AEO', performance: 'Performance', security: 'Security', accessibility: 'Accessibility', content: 'Content', trust: 'Trust', bestPractices: 'Best Practices', privacy: 'Privacy', i18n: 'Localization', analytics: 'Analytics' };
+  const dimWhy = {
+    seo: `<div class="cl">${seoChecks}</div>`,
+    aeo: `<div class="cl">${aeoChecks}</div>`,
+    performance: perfWhy,
+    security: secWhy,
+    accessibility: accWhy,
+    content: `<div class="cl">${contentChecks}</div>`,
+    trust: `<div class="cl">${trustChecks}</div>`,
+    bestPractices: `<div class="cl">${bpChecks}</div>`,
+    privacy: `<div class="cl">${pvChecks}</div>`,
+    i18n: `<div class="cl">${i18nChecks}</div>`,
+    analytics: `<div class="cl">${anChecks}</div>`,
+  };
+
+  function fallbackInsight(key, c, dFind, dWins) {
+    const top = dFind[0];
+    if (c.score >= 80) return `<strong>${c.name} is a strength at ${c.score}/100.</strong> ${dWins[0] ? dWins[0].headline + '. ' : ''}Keep it maintained and put your energy into lower-scoring areas where the gains are bigger.`;
+    if (top) return `<strong>${c.name} scored ${c.score}/100</strong>, held back mainly by <em>${top.issue}</em>. ${top.desc} Working through the items below is the fastest way to raise this score.`;
+    return `<strong>${c.name} scored ${c.score}/100.</strong> Review the signals below for exactly what drove this score.`;
+  }
+  const impColor = (imp) => ({ Critical: '#ef4444', High: '#f97316', Medium: '#f59e0b', Low: '#22c55e' }[imp] || '#64748b');
+  function dimFindingRow(f) {
+    const col = impColor(f.impact);
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #1e293b">
+      <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:${col}22;color:${col};white-space:nowrap;flex-shrink:0">${f.impact}</span>
+      <div><div style="font-size:13px;font-weight:600;color:#e2e8f0">${f.issue}</div><div style="font-size:12px;color:#94a3b8;margin-top:2px;line-height:1.5">${f.desc}</div></div>
+    </div>`;
+  }
+  function dimWinRow(w) {
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #1e293b">
+      <span style="font-size:13px;color:#22c55e;flex-shrink:0">✓</span>
+      <div><div style="font-size:13px;font-weight:600;color:#e2e8f0">${w.headline}</div><div style="font-size:12px;color:#94a3b8;margin-top:2px;line-height:1.5">${w.desc}</div></div>
+    </div>`;
+  }
+
+  const dimPanelsHtml = Object.keys(cats).map((key) => {
+    const c = cats[key];
+    const label = dimCat[key] || c.name;
+    const dFind = findings.filter((f) => f.cat === label);
+    const dWins = wins.filter((w) => w.cat === label);
+    const color = sc(c.score);
+    const aiText = (data.insights && data.insights.byDimension && data.insights.byDimension[key]) || '';
+    const aiHtml = insight(aiText ? `<p>${aiText}</p>` : `<p>${fallbackInsight(key, c, dFind, dWins)}</p>`);
+    const findHtml = dFind.length ? dFind.map(dimFindingRow).join('') : `<div style="padding:12px 0;color:#22c55e;font-size:13px">No issues found in this area. ✓</div>`;
+    const winHtml = dWins.length ? `<div class="sec" style="margin-top:28px"><h2 style="font-size:18px">What's working</h2></div><div class="fl" style="border-left:3px solid #22c55e;padding:0 16px">${dWins.map(dimWinRow).join('')}</div>` : '';
+    return `
+    <div class="pnl" id="p-dim-${key}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px;flex-wrap:wrap">
+        <a href="#" onclick="showTab('overview');return false" style="font-size:13px;font-weight:600;color:#94a3b8">← Back to scorecard</a>
+        <button onclick="window.print()" style="font-size:12px;font-weight:700;border:1px solid #6366f1;background:#6366f111;color:#a5b4fc;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:Inter,sans-serif">📄 Print this page</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:20px;flex-wrap:wrap">
+        <div style="font-size:40px">${c.icon}</div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:24px;font-weight:900;letter-spacing:-0.5px">${c.name}</div>
+          <div style="font-size:13px;color:#64748b">Dimension score • weighted into your overall grade</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:40px;font-weight:900;color:${color};font-family:'JetBrains Mono',monospace;line-height:1">${c.score}<span style="font-size:18px;color:#475569">/100</span></div>
+          <div style="font-size:12px;font-weight:700;color:${color}">${gr(c.score)}</div>
+        </div>
+      </div>
+      ${aiHtml}
+      <div class="sec"><h2 style="font-size:18px">Why this score</h2><p>The exact signals behind the ${c.score}/100</p></div>
+      ${dimWhy[key] || '<div class="panel">The detail for this dimension is in the issues below.</div>'}
+      <div class="sec"><h2 style="font-size:18px">Issues to fix${dFind.length ? ` (${dFind.length})` : ''}</h2></div>
+      <div class="fl" style="padding:0 16px">${findHtml}</div>
+      ${winHtml}
+      <div style="margin-top:28px"><a href="#" onclick="showTab('overview');return false" style="font-size:13px;font-weight:600;color:#94a3b8">← Back to scorecard</a></div>
+    </div>`;
+  }).join('');
+
   // Build full page
   document.body.innerHTML = `
   <style>
@@ -311,8 +435,9 @@
     .dl-btn:hover { background:#4f46e5; }
     @media print {
       .dl-btn { display:none !important; }
-      .tabs { position:static; }
-      .pnl { display:block !important; page-break-inside:avoid; }
+      .tabs { display:none !important; }
+      .pnl { display:none !important; }
+      .pnl.active { display:block !important; page-break-inside:avoid; }
       body { background:#020617; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     }
   </style>
@@ -329,12 +454,7 @@
 
   <div class="tabs"><div class="tabs-in" id="tabBar">
     <button class="tab active" data-tab="overview">Overview</button>
-    <button class="tab" data-tab="findings">Findings</button>
-    <button class="tab" data-tab="technical">Technical</button>
-    <button class="tab" data-tab="seo">SEO & AEO</button>
-    <button class="tab" data-tab="accessibility">Accessibility</button>
-    <button class="tab" data-tab="security">Security & Privacy</button>
-    <button class="tab" data-tab="growth">Conversion</button>
+    <button class="tab" data-tab="findings">Findings &amp; Strengths</button>
     <button class="tab" data-tab="revenue">💰 Revenue Impact</button>
   </div></div>
 
@@ -343,7 +463,9 @@
     <div class="pnl active" id="p-overview">
       <div style="display:flex;flex-wrap:wrap;gap:32px;margin-top:32px;align-items:flex-start">
         <div style="text-align:center">${ringSvg}<div style="font-size:12px;color:#64748b;margin-top:8px">Overall Health Score</div></div>
-        <div style="flex:1 1 300px;min-width:280px">${catBars}</div>
+        <div style="flex:1 1 300px;min-width:280px">${catBars}
+          <div style="font-size:12px;color:#6366f1;margin-top:8px;font-weight:600">👆 Click any dimension for the deep-dive + WinTech Insights</div>
+        </div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:32px">
         ${stat('Critical Issues', criticalCount, '#ef4444', 'Require immediate action')}
@@ -370,99 +492,8 @@
       ${findingsInsight}
     </div>
 
-    <!-- TECHNICAL -->
-    <div class="pnl" id="p-technical">
-      <div class="sec"><h2>Technical Performance</h2><p>Server response, asset loading, and resource optimization</p></div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
-        ${stat('TTFB', (perf.ttfb || '?') + 'ms', perf.ttfb && perf.ttfb < 200 ? '#22c55e' : '#f59e0b', 'Time to first byte')}
-        ${stat('Load Time', (perf.totalLoad || '?') + 'ms', perf.totalLoad && perf.totalLoad < 500 ? '#22c55e' : '#f59e0b', 'Total load')}
-        ${stat('Page Size', perf.pageSize ? Math.round(perf.pageSize / 1024) + 'KB' : '?', '#94a3b8', 'HTML only')}
-        ${stat('PageSpeed', psScores.performance !== undefined ? psScores.performance + '' : 'N/A', psScores.performance >= 80 ? '#22c55e' : psScores.performance >= 50 ? '#f59e0b' : '#ef4444', 'Mobile score')}
-      </div>
-      <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px">Asset Inventory</h3>
-      ${bar([
-        { label: 'Stylesheets', value: perf.cssFiles || 0, color: '#6366f1' },
-        { label: 'Script Tags', value: perf.jsFiles || 0, color: '#f59e0b' },
-        { label: 'Blocking JS', value: perf.renderBlockingJs || 0, color: '#ef4444' },
-        { label: 'Images', value: perf.totalImages || 0, color: '#22c55e' },
-        { label: 'Lazy Loaded', value: perf.lazyLoadedImages || 0, color: perf.lazyLoadedImages > 0 ? '#22c55e' : '#ef4444' },
-      ])}
-      ${psScores.performance !== undefined ? `
-      <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px">Google PageSpeed Scores</h3>
-      ${bar([
-        { label: 'Performance', value: psScores.performance || 0, color: sc(psScores.performance || 0) },
-        { label: 'Accessibility', value: psScores.accessibility || 0, color: sc(psScores.accessibility || 0) },
-        { label: 'Best Practices', value: psScores['best-practices'] || 0, color: sc(psScores['best-practices'] || 0) },
-        { label: 'SEO', value: psScores.seo || 0, color: sc(psScores.seo || 0) },
-      ])}` : ''}
-      <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px">Best Practices &amp; Tech Hygiene</h3>
-      <div class="cl">${bpChecks}</div>
-      ${technicalInsight}
-    </div>
-
-    <!-- SEO & AEO -->
-    <div class="pnl" id="p-seo">
-      <div class="sec"><h2>SEO & AEO Analysis</h2><p>Search engine and AI answer engine visibility</p></div>
-      <div style="display:flex;flex-wrap:wrap;gap:24px">
-        <div style="flex:1 1 300px">
-          <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">SEO Checklist</h3>
-          <div class="cl">${seoChecks}</div>
-        </div>
-        <div style="flex:1 1 300px">
-          <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">AEO / AI Readiness</h3>
-          <div class="cl">${aeoChecks}</div>
-        </div>
-        <div style="flex:1 1 300px">
-          <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">🌐 Internationalization</h3>
-          <div class="cl">${i18nChecks}</div>
-        </div>
-      </div>
-      ${seoInsight}
-    </div>
-
-    <!-- ACCESSIBILITY -->
-    <div class="pnl" id="p-accessibility">
-      <div class="sec"><h2>Accessibility</h2><p>WCAG signals and ADA readiness</p></div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
-        ${stat('Accessibility', (cats.accessibility?.score ?? '?') + '/100', sc(cats.accessibility?.score || 0), 'Weighted into overall')}
-        ${stat('Fields Labeled', accData.formFields ? `${accData.labeledFields}/${accData.formFields}` : 'n/a', (!accData.formFields || accData.labeledFields === accData.formFields) ? '#22c55e' : '#ef4444', 'Screen-reader critical')}
-        ${stat('Landmarks', accData.landmarks ?? 0, accData.landmarks > 0 ? '#22c55e' : '#ef4444', 'Navigation structure')}
-      </div>
-      <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">Accessibility Checklist</h3>
-      <div class="cl">${a11yChecks}</div>
-      ${insight(`<p><strong>Accessibility is both an inclusion and a legal issue.</strong> ADA-related web lawsuits have risen sharply, and most target exactly these gaps — unlabeled form fields, missing landmarks, and low contrast. The same fixes that reduce that exposure also improve usability and SEO for everyone.</p>`)}
-    </div>
-
-    <!-- SECURITY -->
-    <div class="pnl" id="p-security">
-      <div class="sec"><h2>Security & Privacy</h2><p>Headers, SSL, and Mozilla Observatory results</p></div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
-        ${stat(obs.source === 'computed' ? 'Security Grade' : 'Observatory', obsGrade, /^A/.test(obsGrade) ? '#22c55e' : /^B/.test(obsGrade) ? '#84cc16' : /^C/.test(obsGrade) ? '#f59e0b' : '#ef4444', (obs.score !== undefined && obs.score !== null) ? `${obs.source === 'computed' ? 'Header-based' : 'Mozilla'} · ${obs.score}/100` : '')}
-        ${stat('Headers Set', `${sh.headersSet || 0} / ${sh.headersTotal || 7}`, (sh.headersSet || 0) >= 5 ? '#22c55e' : '#ef4444', '')}
-        ${stat('SSL', ssl.valid ? (ssl.grade || 'Valid') : 'Invalid', ssl.valid ? '#22c55e' : '#ef4444', ssl.valid ? 'Certificate active' : ssl.error || '')}
-      </div>
-      <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">Security Headers</h3>
-      <div class="cl">${secChecks}</div>
-      <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px">🔏 Privacy & Compliance</h3>
-      <div class="cl">${pvChecks}</div>
-      ${securityInsight}
-    </div>
-
-    <!-- CONVERSION / GROWTH -->
-    <div class="pnl" id="p-growth">
-      <div class="sec"><h2>Conversion &amp; Analytics</h2><p>Lead capture, trust signals, and whether you can measure any of it</p></div>
-      <div style="display:flex;flex-wrap:wrap;gap:24px">
-        <div style="flex:1 1 300px">
-          <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">🤝 Trust &amp; Conversion</h3>
-          <div class="cl">${trustChecks}</div>
-        </div>
-        <div style="flex:1 1 300px">
-          <h3 style="font-size:16px;font-weight:700;margin:0 0 12px">📊 Analytics &amp; Measurability</h3>
-          <div class="cl">${anChecks}</div>
-        </div>
-      </div>
-      ${insight(`<p><strong>${anData.hasAny ? 'You can measure — now optimize.' : 'Right now, you are flying blind.'}</strong> ${anData.hasAny ? 'Analytics is installed, so every fix in this report can be measured against real visitor behavior.' : 'No analytics was detected. Until you can see traffic and conversions, you cannot tell which changes are working — installing GA4 or a tag manager is the prerequisite for everything else.'} ${trust.forms > 0 ? '' : 'And with no lead-capture form, even the visitors you do attract have no way to raise their hand.'}</p>`)}
-    </div>
+    <!-- PER-DIMENSION DRILL-DOWNS (WinTech Insights) — replaces the old per-dimension tabs -->
+    ${dimPanelsHtml}
 
     <!-- REVENUE IMPACT -->
     <div class="pnl" id="p-revenue">
@@ -512,24 +543,65 @@
     <button class="dl-btn" onclick="window.print()">📄 Download PDF</button>
   </div>`;
 
-  // ===== TAB SWITCHING =====
-  document.getElementById('tabBar').addEventListener('click', function(e) {
-    if (!e.target.classList.contains('tab')) return;
+  // ===== TAB SWITCHING + DIMENSION DRILL-DOWN =====
+  function setActive(panelId, tabName) {
     document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.pnl').forEach(p => p.classList.remove('active'));
-    e.target.classList.add('active');
-    document.getElementById('p-' + e.target.dataset.tab).classList.add('active');
+    const p = document.getElementById(panelId);
+    if (p) p.classList.add('active');
+    if (tabName) { const t = document.querySelector('.tab[data-tab="' + tabName + '"]'); if (t) t.classList.add('active'); }
+    window.scrollTo(0, 0);
+  }
+  // Open a dimension drill-down (deep-linkable via #dim-<key> so it can be shared/printed as its own page).
+  window.showDim = function(key) {
+    if (!document.getElementById('p-dim-' + key)) return;
+    setActive('p-dim-' + key, null);
+    if (history.replaceState) history.replaceState(null, '', '#dim-' + key); else location.hash = 'dim-' + key;
+  };
+  window.showTab = function(tab) {
+    setActive('p-' + tab, tab);
+    if (history.replaceState) history.replaceState(null, '', location.pathname + location.search); else location.hash = '';
+  };
+  document.getElementById('tabBar').addEventListener('click', function(e) {
+    if (!e.target.classList.contains('tab')) return;
+    window.showTab(e.target.dataset.tab);
   });
+  // Honor a #dim-<key> deep link on load.
+  (function() {
+    const h = (location.hash || '').replace('#', '');
+    if (h.indexOf('dim-') === 0) window.showDim(h.slice(4));
+  })();
 
   // ===== REVENUE CALCULATOR =====
   // cLift is now a RELATIVE conversion uplift (e.g. 0.15 = +15% better conversion), not an
   // absolute percentage-point add. Stacking absolute points onto a tiny 0.3% base produced
   // implausible 8x conversion jumps; relative uplifts compound to a defensible improvement.
+  // Each tier's upside is scaled by the gap THIS site actually has, measured from its own scan.
+  // A site that already nails a tier gets ~0 lift there, so two different sites never produce
+  // the same projection — and we only ever credit fixing things that are genuinely broken.
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const miss = (cond) => (cond ? 1 : 0); // 1 = missing / needs fixing
+
+  // Tier 1 — SEO quick wins: title, meta description, single H1, Open Graph
+  const gap1 = (miss(!seo.title?.value || seo.title.length < 15)
+    + miss(!seo.metaDescription?.exists)
+    + miss((seo.h1?.count || 0) !== 1)
+    + miss(!seo.openGraph?.exists)) / 4;
+  // Tier 2 — Schema & AEO: JSON-LD, Organization schema, FAQ schema
+  const gap2 = (miss(!aeo.jsonLd?.exists)
+    + miss(!aeo.organizationSchema)
+    + miss(!aeo.faqSchema)) / 3;
+  // Tier 3 — Content depth: homepage toward an 800-word target
+  const gap3 = clamp01((800 - (seo.wordCount || 0)) / 800);
+  // Tier 4 — Trust & conversion: a lead-capture form + security headers
+  const headersSet = (sec.headers && sec.headers.headersSet) || 0;
+  const gap4 = clamp01((miss(!(trust.forms > 0)) + clamp01((4 - headersSet) / 4)) / 2);
+
   const TIERS = [
-    { num:'Tier 1', title:'SEO Quick Wins', desc:'Title, meta description, H1, Open Graph tags', tLift:0.20, cLift:0.15, color:'#22c55e', bg:'#22c55e11', bc:'#22c55e33' },
-    { num:'Tier 2', title:'Schema & AEO', desc:'JSON-LD, Organization schema, FAQ markup', tLift:0.25, cLift:0.10, color:'#6366f1', bg:'#6366f111', bc:'#6366f133' },
-    { num:'Tier 3', title:'Content Expansion', desc:'Homepage copy 800+ words, blog articles, case studies', tLift:0.50, cLift:0.15, color:'#f59e0b', bg:'#f59e0b11', bc:'#f59e0b33' },
-    { num:'Tier 4', title:'Trust & Conversion', desc:'Lead capture forms, security headers, testimonials', tLift:0.0, cLift:0.30, color:'#60a5fa', bg:'#60a5fa11', bc:'#60a5fa33' },
+    { num:'Tier 1', title:'SEO Quick Wins', desc:'Title, meta description, H1, Open Graph tags', tLift:0.20*gap1, cLift:0.15*gap1, gap:gap1, color:'#22c55e', bg:'#22c55e11', bc:'#22c55e33' },
+    { num:'Tier 2', title:'Schema & AEO', desc:'JSON-LD, Organization schema, FAQ markup', tLift:0.25*gap2, cLift:0.10*gap2, gap:gap2, color:'#6366f1', bg:'#6366f111', bc:'#6366f133' },
+    { num:'Tier 3', title:'Content Expansion', desc:'Homepage copy 800+ words, blog articles, case studies', tLift:0.50*gap3, cLift:0.15*gap3, gap:gap3, color:'#f59e0b', bg:'#f59e0b11', bc:'#f59e0b33' },
+    { num:'Tier 4', title:'Trust & Conversion', desc:'Lead capture forms, security headers, testimonials', tLift:0.0, cLift:0.30*gap4, gap:gap4, color:'#60a5fa', bg:'#60a5fa11', bc:'#60a5fa33' },
   ];
   const CONV_CEILING = 0.05; // hard cap at 5% — keeps results below the 8–15% "elite" benchmark
 
@@ -576,6 +648,7 @@
         <div style="font-size:10px;font-weight:700;color:#475569;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;font-family:'JetBrains Mono',monospace">${t.num}</div>
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">${t.title}</div>
         <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.5">${t.desc}</div>
+        ${t.gap <= 0.01 ? '<div style="display:inline-block;font-size:11px;font-weight:700;color:#22c55e;background:#22c55e15;border:1px solid #22c55e33;border-radius:6px;padding:3px 8px;margin-bottom:10px">✓ Already in place — no action needed</div>' : ''}
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #1e293b"><span style="font-size:11px;color:#94a3b8">Traffic lift</span><span style="font-size:14px;font-weight:700;color:${t.tLift>0?t.color:'#475569'};font-family:'JetBrains Mono',monospace">+${Math.round(t.tLift*100)}%</span></div>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #1e293b"><span style="font-size:11px;color:#94a3b8">Conv. uplift</span><span style="font-size:14px;font-weight:700;color:${t.color};font-family:'JetBrains Mono',monospace">+${Math.round(t.cLift*100)}%</span></div>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #1e293b"><span style="font-size:11px;color:#94a3b8">New leads/mo</span><span style="font-size:14px;font-weight:700;color:${t.color};font-family:'JetBrains Mono',monospace">+${t.addedLeads.toFixed(1)}</span></div>
