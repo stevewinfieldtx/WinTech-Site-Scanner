@@ -498,9 +498,12 @@
     <!-- REVENUE IMPACT -->
     <div class="pnl" id="p-revenue">
       <div class="sec" style="margin-top:24px"><h2>Revenue Impact Calculator</h2><p>Estimated pipeline opportunity from fixing audit findings — adjust sliders to match your business</p></div>
-      <div id="revSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:8px"></div>
-      <div class="sec"><h2>Cumulative Revenue Waterfall</h2><p>Monthly pipeline growth as fixes are applied</p></div>
+      <div id="revSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:6px"></div>
+      <div style="font-size:12px;color:#6366f1;font-weight:600;margin-bottom:8px">👆 Click any number for what it means &amp; why it matters</div>
+      <div id="revDetail" style="display:none;margin-bottom:8px;background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid #4f46e5;border-radius:12px;padding:18px 20px;font-size:13px;color:#cbd5e1;line-height:1.7"></div>
+      <div class="sec"><h2>Cumulative Revenue Waterfall</h2><p>Monthly pipeline growth as fixes are applied — click a step to learn what it is</p></div>
       <div id="waterfall" style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:24px"></div>
+      <div id="wfDetail" style="display:none;margin-top:12px;background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid #4f46e5;border-radius:12px;padding:18px 20px;font-size:13px;color:#cbd5e1;line-height:1.7"></div>
       <div class="sec"><h2>Impact by Fix Tier</h2><p>Each tier builds on the previous</p></div>
       <div id="tierGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px"></div>
       <div class="sec"><h2>Your Business Assumptions</h2><p>Drag to adjust — all calculations update instantly</p></div>
@@ -619,6 +622,31 @@
 
   window.syncSl = syncSl;
 
+  // ===== "What is this?" explanations for the revenue metrics & waterfall steps =====
+  const METRIC_INFO = {
+    pipeline: ['Additional Monthly Pipeline', 'The extra sales pipeline this site could generate <em>each month</em> after the fixes in this report — over and above what it produces today.', 'Pipeline is the dollar value of new opportunities entering your funnel. It is the earliest sign that marketing is working, and it compounds month over month.', '(improved monthly leads − today&rsquo;s monthly leads) × your deal size.'],
+    annual: ['Annual Pipeline Impact', 'The monthly pipeline gain projected across a full year.', 'A modest-looking monthly number becomes the real yearly opportunity — the figure you would weigh budget and ROI against.', 'Additional Monthly Pipeline × 12.'],
+    revenue: ['Est. Annual Revenue Gain', 'The share of that new annual pipeline you would actually <em>win</em>, based on your close rate.', 'Pipeline is potential; revenue is money in the bank. This is the bottom-line number to compare against the cost of doing the work.', 'Annual Pipeline Impact × your close rate (set under &ldquo;Your Business Assumptions&rdquo;).'],
+    leads: ['New Leads / Month', 'The additional inquiries or form-fills per month the improvements could produce.', 'Leads are the raw input to everything downstream — at the same close rate, more qualified leads means more deals, and it is the metric your team feels first.', '(improved conversion rate × monthly visitors) − today&rsquo;s leads.'],
+  };
+  const WF_INFO = [
+    ['Current State', 'Where your pipeline sits <em>today</em>, before any fixes.', 'This is the baseline every bar to the right builds on: current monthly visitors × current conversion rate × deal size.'],
+    ['Tier 1 — SEO Quick Wins', 'Adds the lift from fixing on-page SEO basics: title tag, meta description, H1, and Open Graph tags.', 'These are the first signals Google reads to rank and display you — the cheapest, fastest wins, usually hours of work rather than weeks. (If this site already has them, this step stays flat.)'],
+    ['Tier 2 — Schema &amp; AEO', 'Adds structured data / schema so AI answer engines (ChatGPT, Perplexity, Google AI Overviews) can read and cite your business.', 'A growing share of buyers now start in AI tools instead of Google. Being machine-readable keeps you visible where they are actually looking.'],
+    ['Tier 3 — Content', 'Adds the lift from deeper content: an 800+ word homepage, articles, and case studies.', 'Content is what ranks for more search terms and answers buyer questions — it drives both traffic and trust at once.'],
+    ['Tier 4 — Trust &amp; Conversion', 'Adds conversion lift from trust signals and lead capture: forms, security headers, testimonials.', 'This is what turns the extra traffic from the earlier tiers into actual leads. Without it, you attract visitors but have no way to capture them.'],
+  ];
+  function renderRevDetail(elId, title, parts) {
+    const labels = ['What it is:', 'Why it matters:', 'The math:'];
+    const el = document.getElementById(elId);
+    el.innerHTML = `<div style="font-size:14px;font-weight:800;color:#a5b4fc;margin-bottom:10px">💡 ${title}</div>` +
+      parts.map((p, i) => `<p style="margin:0 0 8px"><strong style="color:#e2e8f0">${labels[i] || ''}</strong> ${p}</p>`).join('');
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  window.explainMetric = function(key) { const m = METRIC_INFO[key]; if (m) renderRevDetail('revDetail', m[0], m.slice(1)); };
+  window.explainWaterfall = function(i) { const w = WF_INFO[i]; if (w) renderRevDetail('wfDetail', w[0], w.slice(1)); };
+
   function calcRev() {
     const visitors = parseInt(document.getElementById('sl-vis').value);
     const deal = parseInt(document.getElementById('sl-deal').value);
@@ -667,9 +695,9 @@
       { label:'+ Tier 4: Trust', value:tierR[3].cumPipeline, color:'#60a5fa' },
     ];
     const wfMax = Math.max(...wfData.map(w=>w.value),1);
-    document.getElementById('waterfall').innerHTML = wfData.map(w => {
+    document.getElementById('waterfall').innerHTML = wfData.map((w, i) => {
       const pct = Math.max((w.value/wfMax)*100, 5);
-      return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      return `<div onclick="explainWaterfall(${i})" title="Click to learn what this step is" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;cursor:pointer;border-radius:6px;padding:2px;transition:background 0.15s" onmouseover="this.style.background='#1e293b66'" onmouseout="this.style.background='transparent'">
         <span style="width:140px;font-size:12px;color:#94a3b8;text-align:right;flex-shrink:0">${w.label}</span>
         <div style="flex:1;height:36px;background:#1e293b;border-radius:6px;overflow:hidden">
           <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${w.color}88,${w.color});border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-size:12px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;min-width:60px">${fmt(w.value)}</div>
@@ -680,23 +708,17 @@
     const totalAdded = tierR[3].cumPipeline - currentPipeline;
     const totalLeads = cumV * cumC - currentLeads;
     const totalRev = totalAdded * closeRate;
-    document.getElementById('revSummary').innerHTML = `
-      <div style="border-radius:12px;padding:24px;text-align:center;border:1px solid #22c55e33;background:#22c55e08">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#22c55e;margin-bottom:6px">Additional Monthly Pipeline</div>
-        <div style="font-size:32px;font-weight:900;color:#22c55e;font-family:'JetBrains Mono',monospace">${fmt(totalAdded)}</div>
-      </div>
-      <div style="border-radius:12px;padding:24px;text-align:center;border:1px solid #6366f133;background:#6366f108">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#6366f1;margin-bottom:6px">Annual Pipeline Impact</div>
-        <div style="font-size:32px;font-weight:900;color:#6366f1;font-family:'JetBrains Mono',monospace">${fmt(totalAdded*12)}</div>
-      </div>
-      <div style="border-radius:12px;padding:24px;text-align:center;border:1px solid #f59e0b33;background:#f59e0b08">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#f59e0b;margin-bottom:6px">Est. Annual Revenue Gain</div>
-        <div style="font-size:32px;font-weight:900;color:#f59e0b;font-family:'JetBrains Mono',monospace">${fmt(totalRev*12)}</div>
-      </div>
-      <div style="border-radius:12px;padding:24px;text-align:center;border:1px solid #ef444433;background:#ef444408">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#ef4444;margin-bottom:6px">New Leads / Month</div>
-        <div style="font-size:32px;font-weight:900;color:#ef4444;font-family:'JetBrains Mono',monospace">+${totalLeads.toFixed(1)}</div>
+    const metricCard = (key, label, value, color) => `
+      <div onclick="explainMetric('${key}')" title="Click for what this means &amp; why it matters" style="border-radius:12px;padding:24px 24px 18px;text-align:center;border:1px solid ${color}33;background:${color}08;cursor:pointer;transition:border-color 0.15s" onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='${color}33'">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:${color};margin-bottom:6px">${label}</div>
+        <div style="font-size:32px;font-weight:900;color:${color};font-family:'JetBrains Mono',monospace">${value}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:8px;font-weight:600">ⓘ what is this?</div>
       </div>`;
+    document.getElementById('revSummary').innerHTML =
+      metricCard('pipeline', 'Additional Monthly Pipeline', fmt(totalAdded), '#22c55e') +
+      metricCard('annual', 'Annual Pipeline Impact', fmt(totalAdded * 12), '#6366f1') +
+      metricCard('revenue', 'Est. Annual Revenue Gain', fmt(totalRev * 12), '#f59e0b') +
+      metricCard('leads', 'New Leads / Month', '+' + totalLeads.toFixed(1), '#ef4444');
   }
   window.calcRev = calcRev;
   calcRev();
