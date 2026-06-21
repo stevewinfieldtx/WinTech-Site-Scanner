@@ -446,8 +446,9 @@ app.get('/report/:scanId', async (req, res) => {
     const siteResult = await db.pool.query('SELECT * FROM sites WHERE id = $1', [scan.site_id]);
     const site = siteResult.rows[0];
 
-    // Serve the report HTML with injected data
-    res.send(generateReportHtml(site, scan));
+    // Serve the report HTML with injected data (+ previous scan for the score-trend delta)
+    const prevScan = await db.getPreviousScan(scan.site_id, scan.id);
+    res.send(generateReportHtml(site, scan, prevScan));
   } catch (err) {
     res.status(500).send('Error loading report');
   }
@@ -613,10 +614,31 @@ function adminAuth(req, res, next) {
 // REPORT HTML GENERATOR
 // ============================================================
 
-function generateReportHtml(site, scan) {
+function generateReportHtml(site, scan, prevScan) {
   const data = typeof scan.scan_data === 'string' ? JSON.parse(scan.scan_data) : scan.scan_data;
   const scores = typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores;
   const findings = typeof scan.findings === 'string' ? JSON.parse(scan.findings) : scan.findings;
+
+  // Score trend vs the previous full scan of this site (overall + per-dimension deltas).
+  let trend = null;
+  if (prevScan) {
+    try {
+      const prev = typeof prevScan.scores === 'string' ? JSON.parse(prevScan.scores) : prevScan.scores;
+      if (prev && typeof prev.overall === 'number') {
+        const byDimension = {};
+        const cats = (scores && scores.categories) || {};
+        const pcats = (prev && prev.categories) || {};
+        Object.keys(cats).forEach((k) => {
+          if (pcats[k] && typeof pcats[k].score === 'number') byDimension[k] = cats[k].score - pcats[k].score;
+        });
+        trend = {
+          overall: scores.overall - prev.overall,
+          sinceDate: new Date(prevScan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          byDimension,
+        };
+      }
+    } catch { trend = null; }
+  }
   // Full save timestamp (date + time) so each generated report is distinguishable and carries an "as of" time.
   // Rendered in Central Time with the zone labeled; change timeZone if your team is elsewhere.
   const scanDate = new Date(scan.created_at).toLocaleString('en-US', {
@@ -636,7 +658,7 @@ function generateReportHtml(site, scan) {
 </head>
 <body>
 <script>
-  window.SCAN_DATA = ${JSON.stringify({ site, scores, findings, data, scanDate, savedAt: scan.created_at })};
+  window.SCAN_DATA = ${JSON.stringify({ site, scores, findings, data, scanDate, savedAt: scan.created_at, trend })};
 </script>
 <div id="loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#020617;color:#e2e8f0;font-family:Inter,sans-serif">
   <div style="text-align:center">

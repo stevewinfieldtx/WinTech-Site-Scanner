@@ -4,8 +4,20 @@
 // ============================================================
 
 (function() {
-  const { site, scores, findings, data, scanDate, savedAt } = window.SCAN_DATA;
+  const { site, scores, findings, data, scanDate, savedAt, trend } = window.SCAN_DATA;
   const domain = site.domain;
+  // Effort-to-fix badge (Config = minutes, Content = hours, Dev = days).
+  function effortBadge(eff) {
+    const m = { Config: ['#22c55e', 'Config · mins'], Content: ['#f59e0b', 'Content · hrs'], Dev: ['#6366f1', 'Dev · days'] }[eff];
+    if (!m) return '';
+    return `<span title="Estimated effort to fix" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:${m[0]}1e;color:${m[0]}">⏱ ${m[1]}</span>`;
+  }
+  // Score-trend delta chip (▲/▼ vs previous scan).
+  function deltaChip(d, big) {
+    if (typeof d !== 'number' || d === 0) return '';
+    const up = d > 0, col = up ? '#22c55e' : '#ef4444';
+    return `<span style="font-size:${big ? 13 : 11}px;font-weight:700;color:${col};font-family:'JetBrains Mono',monospace">${up ? '▲' : '▼'}${up ? '+' : ''}${d}</span>`;
+  }
 
   // The browser's "Save as PDF" uses the page title as the default filename. Stamp it with the
   // save time so each download is a distinct file instead of overwriting the previous one.
@@ -149,7 +161,7 @@
     return `<div onclick="showDim('${key}')" title="Open the deep-dive + WinTech Insights" style="margin:0 -8px 6px;padding:8px;border-radius:8px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="font-size:13px;font-weight:600;color:#e2e8f0">${c.icon} ${c.name}</span>
-        <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700;color:${color};font-family:'JetBrains Mono',monospace">${c.score}%</span><span style="font-size:15px;color:#475569;font-weight:700">›</span></span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700;color:${color};font-family:'JetBrains Mono',monospace">${c.score}%</span>${(trend && trend.byDimension) ? deltaChip(trend.byDimension[key]) : ''}<span style="font-size:15px;color:#475569;font-weight:700">›</span></span>
       </div>
       <div style="height:8px;border-radius:4px;background:#1e293b;overflow:hidden">
         <div style="height:100%;width:${c.score}%;background:linear-gradient(90deg,${color}cc,${color});border-radius:4px"></div>
@@ -164,6 +176,7 @@
         <span style="font-size:11px;font-weight:700;color:#64748b;width:24px;font-family:'JetBrains Mono',monospace">${String(i+1).padStart(2,'0')}</span>
         <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:${ic(f.impact)}22;color:${ic(f.impact)}">${f.impact}</span>
         <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:#1e293b;color:#94a3b8">${f.cat}</span>
+        ${effortBadge(f.effort)}
         <span style="flex:1;font-size:13px;font-weight:600;color:#e2e8f0;min-width:150px">${f.issue}</span>
         <span style="font-size:16px;color:#64748b">▾</span>
       </div>
@@ -211,6 +224,9 @@
     chk('HowTo Schema', aeo.howToSchema ? 'pass' : 'fail', aeo.howToSchema ? 'Present' : 'No HowTo markup'),
     chk('Breadcrumb Schema', aeo.breadcrumbs ? 'pass' : 'fail', aeo.breadcrumbs ? 'Present' : 'No breadcrumbs'),
     chk('llms.txt', data.llmsTxt?.exists ? 'pass' : 'fail', data.llmsTxt?.exists ? `Present (${data.llmsTxt.size} bytes)` : 'Missing. AI engines have no guidance on what to read from your site.'),
+    chk('AI Crawler Access',
+      !aeo.aiCrawlers?.checked ? 'warn' : aeo.aiCrawlers.any ? 'fail' : 'pass',
+      !aeo.aiCrawlers?.checked ? 'No robots.txt found to check' : aeo.aiCrawlers.any ? `Blocking ${aeo.aiCrawlers.blocksAllCrawlers ? 'ALL crawlers' : (aeo.aiCrawlers.blockedMajor?.length ? aeo.aiCrawlers.blockedMajor.join(', ') : aeo.aiCrawlers.blocked.join(', '))} in robots.txt — invisible to those AI answers` : 'GPTBot, ClaudeBot, PerplexityBot, Google-Extended all allowed in'),
   ].join('');
 
   // Security checks
@@ -294,6 +310,22 @@
     chk('Title Tag', !seo.title?.value ? 'fail' : (seo.title.length >= 30 && seo.title.length <= 60) ? 'pass' : 'warn', `"${seo.title?.value || 'missing'}" — ${seo.title?.length || 0} chars`),
   ].join('');
 
+  // Real-user (CrUX) field data, when Google returns it — more credible than lab numbers.
+  const cruxWhy = (() => {
+    const fd = perf.pagespeed && perf.pagespeed.fieldData;
+    if (!fd) return '';
+    const catCol = (c) => ({ FAST: '#22c55e', AVERAGE: '#f59e0b', SLOW: '#ef4444' }[c] || '#64748b');
+    const row = (label, val, cat) => (val == null) ? '' : `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e293b"><span style="font-size:12px;color:#94a3b8">${label}</span><span style="font-size:12px;font-weight:700;color:${catCol(cat)};font-family:'JetBrains Mono',monospace">${val}${cat ? ' · ' + cat : ''}</span></div>`;
+    return `<h3 style="font-size:15px;font-weight:700;margin:18px 0 10px">Real-User Data — Chrome CrUX${fd.source === 'origin' ? ' (site-wide)' : ''}</h3>
+      <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:8px 14px">
+        ${fd.overall ? `<div style="font-size:12px;color:#94a3b8;padding:4px 0 8px">Core Web Vitals assessment: <strong style="color:${catCol(fd.overall)}">${String(fd.overall).replace('_', ' ')}</strong></div>` : ''}
+        ${fd.lcp ? row('Largest Contentful Paint', fd.lcp.p + 'ms', fd.lcp.cat) : ''}
+        ${fd.inp ? row('Interaction to Next Paint', fd.inp.p + 'ms', fd.inp.cat) : ''}
+        ${fd.cls ? row('Cumulative Layout Shift', (fd.cls.p / 100).toFixed(2), fd.cls.cat) : ''}
+        ${fd.fcp ? row('First Contentful Paint', fd.fcp.p + 'ms', fd.fcp.cat) : ''}
+      </div>`;
+  })();
+
   // Performance has no checklist — relocate the old Technical tab's stats + asset bars here.
   const perfWhy = `
     <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
@@ -315,7 +347,8 @@
       { label: 'Accessibility', value: psScores.accessibility || 0, color: sc(psScores.accessibility || 0) },
       { label: 'Best Practices', value: psScores['best-practices'] || 0, color: sc(psScores['best-practices'] || 0) },
       { label: 'SEO', value: psScores.seo || 0, color: sc(psScores.seo || 0) },
-    ])}` : ''}`;
+    ])}` : ''}
+    ${cruxWhy}`;
 
   const secWhy = `
     <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
@@ -360,7 +393,7 @@
     const col = impColor(f.impact);
     return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #1e293b">
       <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:${col}22;color:${col};white-space:nowrap;flex-shrink:0">${f.impact}</span>
-      <div><div style="font-size:13px;font-weight:600;color:#e2e8f0">${f.issue}</div><div style="font-size:12px;color:#94a3b8;margin-top:2px;line-height:1.5">${f.desc}</div></div>
+      <div><div style="font-size:13px;font-weight:600;color:#e2e8f0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${f.issue} ${effortBadge(f.effort)}</div><div style="font-size:12px;color:#94a3b8;margin-top:2px;line-height:1.5">${f.desc}</div></div>
     </div>`;
   }
   function dimWinRow(w) {
@@ -461,6 +494,9 @@
   <div class="cnt">
     <!-- OVERVIEW -->
     <div class="pnl active" id="p-overview">
+      ${(data.rendering && data.rendering.likelyClientRendered) ? `<div style="margin-top:24px;background:#78350f33;border:1px solid #f59e0b66;border-radius:12px;padding:14px 18px;font-size:13px;color:#fcd34d;line-height:1.6"><strong>⚠ This site renders its content with JavaScript.</strong> The scanner reads server HTML, so the Content, SEO, and AEO scores below are <strong>low-confidence</strong> and may understate the live page — and many AI crawlers see the same near-empty shell. A rendered-view pass is the fix.</div>` : ''}
+      ${(data.rendering && data.rendering.rendered) ? `<div style="margin-top:24px;background:#064e3b33;border:1px solid #22c55e66;border-radius:12px;padding:12px 18px;font-size:13px;color:#86efac;line-height:1.6">✓ <strong>JavaScript-rendered site</strong> — these scores reflect the fully rendered page, not just the server shell.${(data.rendering.diff && data.rendering.diff.onlyAfterRender && data.rendering.diff.onlyAfterRender.length) ? ' See the AEO finding: some signals are visible to Google but hidden from non-JS AI crawlers.' : ''}</div>` : ''}
+      ${trend ? `<div style="margin-top:24px;background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px 18px;font-size:13px;color:#cbd5e1;display:flex;align-items:center;gap:10px">📈 <span>Overall score ${trend.overall === 0 ? 'is <strong>unchanged</strong>' : 'moved ' + deltaChip(trend.overall, true)} since the previous scan (${trend.sinceDate}).</span></div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:32px;margin-top:32px;align-items:flex-start">
         <div style="text-align:center">${ringSvg}<div style="font-size:12px;color:#64748b;margin-top:8px">Overall Health Score</div></div>
         <div style="flex:1 1 300px;min-width:280px">${catBars}
