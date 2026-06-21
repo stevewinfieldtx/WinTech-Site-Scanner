@@ -200,29 +200,35 @@ async function unlockAll(){
   const msg = $('gateMsg');
   if(!email || !email.includes('@')){ msg.style.color='#ef4444'; msg.textContent='Enter a valid email.'; return; }
   msg.style.color='#64748b'; msg.textContent='Verifying…';
-  let gateErr = null, emailed = false;
+  const bothMode = !!(pending.scanId && pending.audienceUrl);
+  const scanId = pending.scanId;
+  let gateErr = null, emailed = false, audienceId = null;
   try {
     if(pending.scanId){
       const r = await fetch('/api/unlock', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, scanId: pending.scanId }) });
       const d = await r.json();
       if(d.status==='unlocked'){ emailed = emailed || !!d.emailed;
-        $('webUnlocked').innerHTML = '<div class="gate" style="border-top:1px solid #1e293b"><a href="'+d.reportUrl+'" style="background:#6366f1;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open full report →</a> <span style="color:#64748b;font-size:13px">(Download PDF from the report page.)</span></div>';
+        if(!bothMode) $('webUnlocked').innerHTML = '<div class="gate" style="border-top:1px solid #1e293b"><a href="'+d.reportUrl+'" style="background:#6366f1;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open full report →</a> <span style="color:#64748b;font-size:13px">(Download PDF from the report page.)</span></div>';
         pending.scanId=null; }
       else { gateErr = d.message || d.error || 'Could not unlock.'; }
     }
     if(!gateErr && pending.audienceUrl){
       const r = await fetch('/api/audience', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: pending.audienceUrl, deep:true, email }) });
       const d = await r.json();
-      if(d.status==='deep'){ emailed = emailed || !!d.emailed; renderDeepAudience(d); pending.audienceUrl=null; }
+      if(d.status==='deep'){ emailed = emailed || !!d.emailed; audienceId = d.reportId; renderDeepAudience(d, bothMode); pending.audienceUrl=null; }
       else { gateErr = d.message || d.error || 'Could not unlock.'; }
     }
   } catch(e){ gateErr = 'Something went wrong. Try again.'; }
   if(gateErr){ msg.style.color='#ef4444'; msg.textContent = gateErr; return; }
+  if(bothMode && scanId && audienceId){
+    const combined = '/report/'+scanId+'?audience='+audienceId;
+    $('webUnlocked').innerHTML = '<div class="gate" style="border-top:1px solid #1e293b"><a href="'+combined+'" target="_blank" rel="noopener" style="background:#6366f1;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open combined report →</a> <span style="color:#64748b;font-size:13px">One report — its Download PDF includes both the website audit and the audience analysis.</span></div>';
+  }
   const gc = $('gateCard');
   if(gc) gc.outerHTML = '<p style="text-align:center;color:#22c55e;font-size:13px;margin:4px 0 22px">'+(emailed?('Unlocked — and emailed to '+esc(email)+'.'):'Unlocked here. (Set RESEND_API_KEY to also email it.)')+'</p>';
 }
 
-function renderDeepAudience(d){
+function renderDeepAudience(d, hideLink){
   const clarityColor = d.clarity==='clear' ? '#22c55e' : d.clarity==='mixed' ? '#f59e0b' : '#ef4444';
   let html = '<div class="gate" style="border-top:1px solid #1e293b"><div class="aud-row"><div class="k">Positioning clarity</div>'+
     '<div class="v"><span class="badge" style="background:'+clarityColor+'22;color:'+clarityColor+'">'+esc(d.clarity)+' · '+d.agreement+'% model agreement</span></div></div>'+
@@ -234,7 +240,10 @@ function renderDeepAudience(d){
       '<div class="line"><b>Goal:</b> '+esc(m.goal||'—')+'</div>'+
       '<div class="line"><b>Why:</b> '+esc(m.why||'—')+'</div></div>';
   });
-  html += '</div></div>';
+  html += '</div>';
+  const aurl = d.reportUrl || (d.reportId ? '/audience/' + d.reportId : '');
+  if (aurl && !hideLink) html += '<div style="margin-top:16px"><a href="'+aurl+'" target="_blank" rel="noopener" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px">Open full report &amp; download PDF →</a></div>';
+  html += '</div>';
   $('audDeep').innerHTML = html;
 }
 

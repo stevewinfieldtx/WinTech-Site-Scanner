@@ -4,7 +4,7 @@
 // ============================================================
 
 (function() {
-  const { site, scores, findings, data, scanDate, savedAt, trend } = window.SCAN_DATA;
+  const { site, scores, findings, data, scanDate, savedAt, trend, audience } = window.SCAN_DATA;
   const domain = site.domain;
   // Effort-to-fix badge (Config = minutes, Content = hours, Dev = days).
   function effortBadge(eff) {
@@ -417,7 +417,7 @@
     <div class="pnl" id="p-dim-${key}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px;flex-wrap:wrap">
         <a href="#" onclick="showTab('overview');return false" style="font-size:13px;font-weight:600;color:#94a3b8">← Back to scorecard</a>
-        <button onclick="window.print()" style="font-size:12px;font-weight:700;border:1px solid #6366f1;background:#6366f111;color:#a5b4fc;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:Inter,sans-serif">📄 Print this page</button>
+        <button onclick="printSingle()" style="font-size:12px;font-weight:700;border:1px solid #6366f1;background:#6366f111;color:#a5b4fc;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:Inter,sans-serif">📄 Print this page</button>
       </div>
       <div style="display:flex;align-items:center;gap:16px;margin-top:20px;flex-wrap:wrap">
         <div style="font-size:40px">${c.icon}</div>
@@ -439,6 +439,33 @@
       <div style="margin-top:28px"><a href="#" onclick="showTab('overview');return false" style="font-size:13px;font-weight:600;color:#94a3b8">← Back to scorecard</a></div>
     </div>`;
   }).join('');
+
+  // Audience Intelligence panel — only present in "Both" mode (?audience=<id>), so one report
+  // (and one Download PDF) covers both the website audit and the audience analysis.
+  const audiencePanelHtml = audience ? (() => {
+    const esc2 = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const ac = (a) => ({ aligned: '#22c55e', partial: '#f59e0b', mismatch: '#ef4444' }[String(a || '').toLowerCase()] || '#94a3b8');
+    const cc = (c) => ({ clear: '#22c55e', mixed: '#f59e0b', ambiguous: '#ef4444' }[String(c || '').toLowerCase()] || '#94a3b8');
+    const h = audience.headline || {};
+    const card = (label, value, color) => `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:18px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:6px">${label}</div><div style="font-size:16px;font-weight:700;line-height:1.5;color:${color || '#e2e8f0'}">${value}</div></div>`;
+    const models = (audience.models || []).map((m) => `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:16px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#a5b4fc">${esc2((m.model || '').split('/').pop())}</span><span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:6px;text-transform:capitalize;background:${ac(m.alignment)}1e;color:${ac(m.alignment)}">${esc2(m.alignment || '—')}</span></div>
+        <div style="font-size:13px;margin-top:8px"><b style="color:#64748b">Audience:</b> ${esc2(m.audience || '—')}</div>
+        <div style="font-size:13px"><b style="color:#64748b">Goal:</b> ${esc2(m.goal || '—')}</div>
+        <div style="font-size:13px;color:#cbd5e1"><b style="color:#64748b">Why:</b> ${esc2(m.why || '—')}</div></div>`).join('');
+    return `<div class="pnl main-pnl" id="p-audience">
+      <div class="sec" style="margin-top:24px"><h2>🎯 Audience Intelligence</h2><p>Who your site is for, what it's trying to do, and whether that's clear</p></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        ${card("Who your site is for", esc2(h.audience || '—'))}
+        ${card("What it's trying to get them to do", esc2(h.goal || '—'))}
+        ${card("Main call-to-action seen", esc2(h.cta || 'none found'))}
+        ${card("Audience ↔ Goal alignment", esc2(h.alignment || '—'), ac(h.alignment))}
+      </div>
+      ${(audience.clarity !== undefined) ? card("Positioning clarity", esc2(audience.clarity || '—') + ' · ' + (Number(audience.agreement) || 0) + '% model agreement', cc(audience.clarity)) : ''}
+      ${models ? `<div class="sec"><h2 style="font-size:18px">How GPT, Gemini, and Claude each read your homepage</h2></div>${models}` : ''}
+      ${insight('<p><strong>Read this as a mirror.</strong> It is a fast outside read of the message a first-time visitor receives — not a substitute for what you know about your customers. If the three models disagree, or the audience and goal do not match what you intend, your homepage copy is where to fix it.</p>')}
+    </div>`;
+  })() : '';
 
   // Build full page
   document.body.innerHTML = `
@@ -469,8 +496,13 @@
     @media print {
       .dl-btn { display:none !important; }
       .tabs { display:none !important; }
+      /* Default (Download PDF): print the FULL report — the three cross-cutting panels —
+         and hide the per-dimension drill-downs so content isn't duplicated 11x. */
       .pnl { display:none !important; }
-      .pnl.active { display:block !important; page-break-inside:avoid; }
+      .main-pnl { display:block !important; page-break-inside:avoid; }
+      /* Single-view mode (a dimension's "Print this page" button): only the active panel. */
+      body.print-single .main-pnl { display:none !important; }
+      body.print-single .pnl.active { display:block !important; page-break-inside:avoid; }
       body { background:#020617; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     }
   </style>
@@ -488,12 +520,13 @@
   <div class="tabs"><div class="tabs-in" id="tabBar">
     <button class="tab active" data-tab="overview">Overview</button>
     <button class="tab" data-tab="findings">Findings &amp; Strengths</button>
+    ${audience ? '<button class="tab" data-tab="audience">🎯 Audience</button>' : ''}
     <button class="tab" data-tab="revenue">💰 Revenue Impact</button>
   </div></div>
 
   <div class="cnt">
     <!-- OVERVIEW -->
-    <div class="pnl active" id="p-overview">
+    <div class="pnl main-pnl active" id="p-overview">
       ${(data.rendering && data.rendering.likelyClientRendered) ? `<div style="margin-top:24px;background:#78350f33;border:1px solid #f59e0b66;border-radius:12px;padding:14px 18px;font-size:13px;color:#fcd34d;line-height:1.6"><strong>⚠ This site renders its content with JavaScript.</strong> The scanner reads server HTML, so the Content, SEO, and AEO scores below are <strong>low-confidence</strong> and may understate the live page — and many AI crawlers see the same near-empty shell. A rendered-view pass is the fix.</div>` : ''}
       ${(data.rendering && data.rendering.rendered) ? `<div style="margin-top:24px;background:#064e3b33;border:1px solid #22c55e66;border-radius:12px;padding:12px 18px;font-size:13px;color:#86efac;line-height:1.6">✓ <strong>JavaScript-rendered site</strong> — these scores reflect the fully rendered page, not just the server shell.${(data.rendering.diff && data.rendering.diff.onlyAfterRender && data.rendering.diff.onlyAfterRender.length) ? ' See the AEO finding: some signals are visible to Google but hidden from non-JS AI crawlers.' : ''}</div>` : ''}
       ${trend ? `<div style="margin-top:24px;background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px 18px;font-size:13px;color:#cbd5e1;display:flex;align-items:center;gap:10px">📈 <span>Overall score ${trend.overall === 0 ? 'is <strong>unchanged</strong>' : 'moved ' + deltaChip(trend.overall, true)} since the previous scan (${trend.sinceDate}).</span></div>` : ''}
@@ -520,7 +553,7 @@
     </div>
 
     <!-- FINDINGS -->
-    <div class="pnl" id="p-findings">
+    <div class="pnl main-pnl" id="p-findings">
       <div class="sec"><h2>What You're Doing Well</h2><p>${wins.length} strength${wins.length === 1 ? '' : 's'} detected — credit where it's due</p></div>
       <div class="fl" style="border-left:3px solid #22c55e">${winsHtml}</div>
       <div class="sec" style="margin-top:28px"><h2>All Findings</h2><p>${findings.length} issue${findings.length === 1 ? '' : 's'} found — click to expand</p></div>
@@ -532,7 +565,7 @@
     ${dimPanelsHtml}
 
     <!-- REVENUE IMPACT -->
-    <div class="pnl" id="p-revenue">
+    <div class="pnl main-pnl" id="p-revenue">
       <div class="sec" style="margin-top:24px"><h2>Revenue Impact Calculator</h2><p>Estimated pipeline opportunity from fixing audit findings — adjust sliders to match your business</p></div>
       <div id="revSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:6px"></div>
       <div style="font-size:12px;color:#6366f1;font-weight:600;margin-bottom:8px">👆 Click any number for what it means &amp; why it matters</div>
@@ -576,10 +609,12 @@
       </div>
     </div>
 
+    ${audiencePanelHtml}
+
     <div class="foot">
       <p>Generated by WinTech Partners Website Intelligence Scanner • ${scanDate}</p>
     </div>
-    <button class="dl-btn" onclick="window.print()">📄 Download PDF</button>
+    <button class="dl-btn" onclick="printFull()">📄 Download PDF</button>
   </div>`;
 
   // ===== TAB SWITCHING + DIMENSION DRILL-DOWN =====
@@ -605,6 +640,17 @@
     if (!e.target.classList.contains('tab')) return;
     window.showTab(e.target.dataset.tab);
   });
+  // Print just the dimension you're viewing (the floating Download PDF prints the full report).
+  window.printSingle = function() {
+    document.body.classList.add('print-single');
+    window.print();
+  };
+  // Full report — always clears single-mode first in case a prior afterprint didn't fire.
+  window.printFull = function() {
+    document.body.classList.remove('print-single');
+    window.print();
+  };
+  window.addEventListener('afterprint', function() { document.body.classList.remove('print-single'); });
   // Honor a #dim-<key> deep link on load.
   (function() {
     const h = (location.hash || '').replace('#', '');

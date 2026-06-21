@@ -295,7 +295,7 @@ function websiteEmailHtml(domain, link) {
     <p style="margin:18px 0"><a href="${esc(link)}" style="background:#6366f1;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open your report</a></p>
     <p style="color:#94a3b8;font-size:13px">Tip: use the "Download PDF" button on the report to save or send a copy.</p>`);
 }
-function audienceEmailHtml(domain, d) {
+function audienceEmailHtml(domain, d, link) {
   const models = (d.models || []).map((m) => `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px">
     <div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase">${esc((m.model || '').split('/').pop())}</div>
     <div style="font-size:13px"><strong>For:</strong> ${esc(m.audience)}</div>
@@ -305,6 +305,8 @@ function audienceEmailHtml(domain, d) {
     <p style="color:#475569"><strong>Who it's for:</strong> ${esc(d.headline && d.headline.audience)}</p>
     <p style="color:#475569"><strong>What it wants them to do:</strong> ${esc(d.headline && d.headline.goal)}</p>
     <p style="color:#475569"><strong>Positioning clarity:</strong> ${esc(d.clarity)} · ${d.agreement}% model agreement</p>
+    ${link ? `<p style="margin:18px 0"><a href="${esc(link)}" style="background:#6366f1;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open the full report</a></p>
+    <p style="color:#94a3b8;font-size:13px">Use the "Download PDF" button on the report to save or send a copy.</p>` : ''}
     <p style="margin:16px 0 8px;font-weight:700">How GPT, Gemini, and Claude each read it:</p>${models}`);
 }
 
@@ -448,7 +450,17 @@ app.get('/report/:scanId', async (req, res) => {
 
     // Serve the report HTML with injected data (+ previous scan for the score-trend delta)
     const prevScan = await db.getPreviousScan(scan.site_id, scan.id);
-    res.send(generateReportHtml(site, scan, prevScan));
+
+    // "Both" mode: attach the audience analysis so ONE report (and one Download PDF) covers both.
+    let audience = null;
+    if (req.query.audience) {
+      const arec = await db.getAudienceById(parseInt(req.query.audience));
+      if (arec) {
+        const ar = typeof arec.result === 'string' ? JSON.parse(arec.result) : arec.result;
+        audience = (ar && ar.deep) ? ar.deep : (ar && ar.short ? { headline: ar.short } : null);
+      }
+    }
+    res.send(generateReportHtml(site, scan, prevScan, audience));
   } catch (err) {
     res.status(500).send('Error loading report');
   }
@@ -535,14 +547,109 @@ app.post('/api/audience', async (req, res) => {
     const deepResult = await audienceDeep(p);
     const rec = await db.saveAudienceReport({ domain: p.domain, url: p.url, contentHash: p.contentHash, result: { short: deepResult.headline, deep: deepResult } });
     await db.recordScanHistory({ email, domain: p.domain, kind: 'audience', audienceId: rec.id });
-    const emailed = await sendEmail(email, `Your audience analysis — ${p.domain}`, audienceEmailHtml(p.domain, deepResult));
-    return res.json({ status: 'deep', domain: p.domain, emailed, ...deepResult });
+    const reportUrl = '/audience/' + rec.id;
+    const emailed = await sendEmail(email, `Your audience analysis — ${p.domain}`, audienceEmailHtml(p.domain, deepResult, absBase(req) + reportUrl));
+    return res.json({ status: 'deep', domain: p.domain, reportId: rec.id, reportUrl, emailed, ...deepResult });
 
   } catch (err) {
     console.error('[AUDIENCE ERROR]', err);
     return res.status(500).json({ error: 'Audience analysis failed: ' + err.message });
   }
 });
+
+// Print-friendly Audience Intel report page (with Download PDF), mirroring the website report.
+app.get('/audience/:id', async (req, res) => {
+  try {
+    const rec = await db.getAudienceById(parseInt(req.params.id));
+    if (!rec) return res.status(404).send('Audience report not found');
+    res.send(generateAudienceReportHtml(rec));
+  } catch (err) {
+    console.error('[AUDIENCE PAGE]', err);
+    res.status(500).send('Error loading audience report');
+  }
+});
+
+function generateAudienceReportHtml(rec) {
+  const result = typeof rec.result === 'string' ? JSON.parse(rec.result) : rec.result;
+  const d = (result && result.deep) || null;
+  const domain = rec.domain;
+  const when = new Date(rec.created_at).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago', timeZoneName: 'short' });
+  const alignColor = (a) => ({ aligned: '#22c55e', partial: '#f59e0b', mismatch: '#ef4444' }[String(a || '').toLowerCase()] || '#94a3b8');
+  const clarityColor = (c) => ({ clear: '#22c55e', mixed: '#f59e0b', ambiguous: '#ef4444' }[String(c || '').toLowerCase()] || '#94a3b8');
+
+  let bodyInner;
+  if (!d) {
+    const short = (result && result.short) || {};
+    bodyInner = `<div class="grid">
+        <div class="card"><div class="lbl">Who it's for</div><div class="big">${esc(short.audience || '—')}</div></div>
+        <div class="card"><div class="lbl">What it wants them to do</div><div class="big">${esc(short.goal || '—')}</div></div>
+      </div>
+      <p style="color:#94a3b8;margin-top:20px">This is the free summary. Run the deep analysis for the three-model breakdown and positioning-clarity signal.</p>`;
+  } else {
+    const h = d.headline || {};
+    const modelCards = (d.models || []).map((m) => `
+      <div class="model">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="mname">${esc((m.model || '').split('/').pop())}</span>
+          <span class="badge" style="background:${alignColor(m.alignment)}1e;color:${alignColor(m.alignment)}">${esc(m.alignment || '—')}</span>
+        </div>
+        <div class="row"><span class="k">Audience</span><span>${esc(m.audience || '—')}</span></div>
+        <div class="row"><span class="k">Goal</span><span>${esc(m.goal || '—')}</span></div>
+        <div class="row"><span class="k">Why</span><span style="color:#cbd5e1">${esc(m.why || '—')}</span></div>
+      </div>`).join('');
+    bodyInner = `
+      <div class="grid">
+        <div class="card"><div class="lbl">Who your site is for</div><div class="big">${esc(h.audience || '—')}</div></div>
+        <div class="card"><div class="lbl">What it's trying to get them to do</div><div class="big">${esc(h.goal || '—')}</div></div>
+      </div>
+      <div class="grid" style="margin-top:16px">
+        <div class="card"><div class="lbl">Main call-to-action seen</div><div class="mid">${esc(h.cta || 'none found')}</div></div>
+        <div class="card"><div class="lbl">Audience ↔ Goal alignment</div><div class="mid" style="color:${alignColor(h.alignment)};font-weight:800;text-transform:capitalize">${esc(h.alignment || '—')}</div></div>
+      </div>
+      <div class="card" style="margin-top:16px;border-color:${clarityColor(d.clarity)}55">
+        <div class="lbl">Positioning clarity</div>
+        <div class="mid" style="color:${clarityColor(d.clarity)};font-weight:800;text-transform:capitalize">${esc(d.clarity || '—')} <span style="color:#64748b;font-weight:600;font-size:14px">· ${Number(d.agreement) || 0}% model agreement</span></div>
+        <p style="color:#94a3b8;font-size:13px;margin-top:8px">When three independent AI models describe the same audience and goal, your message is clear. Divergence means the message itself is ambiguous — a conclusion no single model could reach alone.</p>
+      </div>
+      <h2 class="sec">How GPT, Gemini, and Claude each read your homepage</h2>
+      ${modelCards}
+      <div class="card" style="margin-top:20px"><div class="lbl">What this means</div><p style="color:#cbd5e1;margin-top:6px;line-height:1.7">This is a fast outside read of the message a first-time visitor actually receives — not a substitute for what you know about your customers. Use it as a mirror: if the models disagree, or if the audience and goal don't match what you intend, your homepage copy is the place to fix it.</p></div>`;
+  }
+
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Audience Report — ${esc(domain)}</title><meta name="robots" content="noindex, nofollow">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#020617;color:#e2e8f0;font-family:Inter,system-ui,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+    .hdr{background:linear-gradient(135deg,#0f172a,#1e1b4b,#0f172a);border-bottom:1px solid #1e293b;padding:32px 24px}
+    .hdr-in,.wrap{max-width:820px;margin:0 auto}
+    .wrap{padding:24px 24px 80px}
+    .eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;color:#6366f1;text-transform:uppercase}
+    h1{font-size:32px;font-weight:900;letter-spacing:-1px;margin:8px 0 4px;background:linear-gradient(135deg,#e2e8f0,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .meta{font-size:12px;color:#64748b}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media(max-width:620px){.grid{grid-template-columns:1fr}}
+    .card{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:20px}
+    .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:8px}
+    .big{font-size:18px;font-weight:700;line-height:1.5;color:#e2e8f0}
+    .mid{font-size:16px;color:#e2e8f0}
+    .sec{font-size:20px;font-weight:800;margin:32px 0 14px}
+    .model{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:18px;margin-bottom:12px}
+    .mname{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#a5b4fc}
+    .badge{font-size:11px;font-weight:700;padding:2px 10px;border-radius:6px;text-transform:capitalize}
+    .row{display:flex;gap:12px;padding:8px 0;border-top:1px solid #1e293b;font-size:14px;line-height:1.5}
+    .row:first-of-type{border-top:none}
+    .k{flex:0 0 80px;color:#64748b;font-weight:600}
+    .dl{position:fixed;bottom:24px;right:24px;padding:14px 24px;font-size:14px;font-weight:700;border-radius:12px;border:none;background:#6366f1;color:#fff;cursor:pointer;box-shadow:0 4px 20px #6366f144;font-family:Inter,sans-serif}
+    .foot{margin-top:40px;padding-top:20px;border-top:1px solid #1e293b;text-align:center;font-size:11px;color:#475569}
+    @media print{.dl{display:none!important}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <div class="hdr"><div class="hdr-in"><div class="eyebrow">Audience Intelligence</div><h1>${esc(domain)}</h1><div class="meta">Is your website aimed at the right customer? · ${esc(when)}</div></div></div>
+  <div class="wrap">${bodyInner}
+    <div class="foot">Generated by WinTech Partners · Audience Intel · ${esc(when)}</div>
+  </div>
+  <button class="dl" onclick="window.print()">📄 Download PDF</button>
+  </body></html>`;
+}
 
 
 // ============================================================
@@ -614,7 +721,7 @@ function adminAuth(req, res, next) {
 // REPORT HTML GENERATOR
 // ============================================================
 
-function generateReportHtml(site, scan, prevScan) {
+function generateReportHtml(site, scan, prevScan, audience) {
   const data = typeof scan.scan_data === 'string' ? JSON.parse(scan.scan_data) : scan.scan_data;
   const scores = typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores;
   const findings = typeof scan.findings === 'string' ? JSON.parse(scan.findings) : scan.findings;
@@ -658,7 +765,7 @@ function generateReportHtml(site, scan, prevScan) {
 </head>
 <body>
 <script>
-  window.SCAN_DATA = ${JSON.stringify({ site, scores, findings, data, scanDate, savedAt: scan.created_at, trend })};
+  window.SCAN_DATA = ${JSON.stringify({ site, scores, findings, data, scanDate, savedAt: scan.created_at, trend, audience: audience || null })};
 </script>
 <div id="loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#020617;color:#e2e8f0;font-family:Inter,sans-serif">
   <div style="text-align:center">
