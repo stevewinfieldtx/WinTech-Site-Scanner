@@ -507,9 +507,11 @@
 
       /* ---- Clean, ink-friendly LIGHT theme for the printed / PDF version ---- */
       html, body { background:#ffffff !important; color:#111827 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .hdr { background:#ffffff !important; border-bottom:2px solid #4f46e5 !important; padding:0 0 12px 0 !important; margin-bottom:6px !important; }
+      .hdr { background:#ffffff !important; border-bottom:2px solid #4f46e5 !important; padding:4px 24px 12px 24px !important; margin-bottom:6px !important; }
       .hdr h1 { -webkit-text-fill-color:#1e1b4b !important; color:#1e1b4b !important; background:none !important; }
-      .cnt { padding:0 !important; max-width:none !important; }
+      /* Keep the layout within the printable page width (it was spilling off the right edge). */
+      .hdr-in, .cnt { max-width:920px !important; }
+      .cnt { padding:0 24px !important; }
       .sec { margin-top:22px !important; }
       .sec h2 { color:#111827 !important; }
       .sec p { color:#6b7280 !important; }
