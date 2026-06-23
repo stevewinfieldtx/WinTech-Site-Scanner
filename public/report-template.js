@@ -504,6 +504,9 @@
       /* Full report = summary panels AND every dimension drill-down, each starting a fresh page. */
       .main-pnl, [id^="p-dim-"] { display:block !important; }
       #p-findings, #p-revenue, #p-audience, [id^="p-dim-"] { page-break-before: always; }
+      /* Each titled section in the summary panels gets its own page (skip the first in each panel
+         so we don't leave a blank). Per-dimension pages stay together as one unit. */
+      .main-pnl .sec:not(:first-child) { page-break-before: always; }
       [id^="p-dim-"] a { display:none !important; }
       /* Single-view mode (a dimension's "Print this page"): only the active panel. */
       body.print-single .main-pnl, body.print-single [id^="p-dim-"] { display:none !important; }
@@ -513,9 +516,10 @@
       html, body { background:#ffffff !important; color:#111827 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .hdr { background:#ffffff !important; border-bottom:2px solid #4f46e5 !important; padding:4px 0 12px 0 !important; margin-bottom:6px !important; }
       .hdr h1 { -webkit-text-fill-color:#1e1b4b !important; color:#1e1b4b !important; background:none !important; }
-      /* Fit the layout to the printable page width — NOT a fixed pixel cap. The @page 0.5in margin
-         provides the print margin; content fills the rest and reflows so nothing clips. */
-      .hdr-in, .cnt { max-width:100% !important; width:100% !important; margin:0 !important; padding:0 !important; }
+      /* US Letter at 0.5in margins leaves 7.5in (~720px) of printable width. Cap the content
+         BELOW that (700px) so it can never exceed the page, regardless of Chrome's internal
+         print viewport. Left-aligned (not centered) so it can't shift off the page edge. */
+      .hdr-in, .cnt { max-width:700px !important; width:auto !important; margin:0 !important; padding:0 !important; }
       .sec { margin-top:22px !important; }
       .sec h2 { color:#111827 !important; }
       .sec p { color:#6b7280 !important; }
