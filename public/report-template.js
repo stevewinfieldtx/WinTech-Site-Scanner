@@ -467,6 +467,140 @@
     </div>`;
   })() : '';
 
+  // ===== "The Proof" — published research behind the WinTech methodology (82 studies) =====
+  const RESEARCH = [
+    ['The Stakes — B2B buyers decide before they ever talk to you', [
+      [`80% of the B2B buying journey now happens with no direct vendor contact.`, `Gartner`, `https://corporatevisions.com/blog/b2b-buying-behavior-statistics-trends/`],
+      [`Buyers spend only ~17% of total buying time meeting potential vendors — split across all vendors considered.`, `Gartner`, `https://corporatevisions.com/blog/b2b-buying-behavior-statistics-trends/`],
+      [`67% of B2B buyers prefer a rep-free buying experience.`, `Gartner (2026)`, `https://www.gartner.com/en/newsroom/press-releases/2026-03-09-gartner-sales-survey-finds-67-percent-of-b-two-b-buyers-prefer-a-rep-free-experience`],
+      [`70% of buyers prefer a fully digital, self-service experience.`, `Gartner`, `https://www.digitalcommerce360.com/2026/03/17/gartner-b2b-buyers-rep-free-purchasing-ai-reshapes-sales/`],
+      [`86% of B2B purchases stall; 81% of buyers are dissatisfied with the provider they choose.`, `Gartner`, `https://www.gartner.com/en/newsroom/press-releases/2026-05-20-gartner-survey-finds-sixty-nine-percent-of-b-two-b-buyers-turn-to-sales-reps-to-validate-ai-generated-insights`],
+      [`Buyers use AI to compare vendors (55%), research products (54%), and build internal business cases (47%) before contacting anyone.`, `Forrester (2026)`, `https://www.swordandthescript.com/2025/08/b2b-preferences/`],
+      [`Twice as many buyers name generative AI / conversational search as their single most meaningful research source — outranking vendor websites, experts, and reps.`, `Forrester (2026)`, `https://www.swordandthescript.com/2025/08/b2b-preferences/`],
+    ]],
+    ['Organic Search — the largest B2B revenue channel', [
+      [`Organic search generates 44.6% of all B2B revenue — more than double any other channel.`, `BrightEdge`, `https://seoprofy.com/blog/b2b-seo-statistics/`],
+      [`Organic drives ~53% of all website traffic; organic + paid search together exceed 75% of B2B traffic.`, `BrightEdge`, `https://ahrefs.com/blog/b2b-seo-statistics/`],
+      [`B2B SEO delivers an average ROI of ~748% ($7.48 per $1) across 2021–2025 client data.`, `First Page Sage`, `https://www.olivermunro.com/writersblog/b2b-seo-statistics`],
+      [`B2B SaaS SEO averages ~702% ROI with a ~7-month break-even.`, `First Page Sage`, `https://www.poweredbysearch.com/learn/b2b-saas-seo-stats/`],
+      [`Average organic-search conversion rate is ~5.0%, vs ~1.77% for display advertising.`, `Industry benchmark`, `https://revenuezen.com/b2b-seo-statistics/`],
+      [`49% of B2B marketers use SEO as a primary channel; 88% are maintaining or increasing SEO budgets.`, `Industry survey`, `https://b2bdigitalmarketers.com/blog/b2b-seo-statistics/`],
+    ]],
+    ['AEO / AI Search — being cited by ChatGPT, Perplexity & AI Overviews', [
+      [`AI-referred website sessions grew 527% year-over-year through mid-2025.`, `GEO Statistics`, `https://www.omnibound.ai/blog/generative-engine-optimization-statistics`],
+      [`Google AI Overviews now appear in ~55% of all searches.`, `GEO Statistics`, `https://www.omnibound.ai/blog/generative-engine-optimization-statistics`],
+      [`ChatGPT reaches ~800M weekly users and handles ~2.5 billion prompts per day.`, `OpenAI / industry`, `https://www.omnibound.ai/blog/generative-engine-optimization-statistics`],
+      [`LLM-referred visitors convert far higher: 15.9% from ChatGPT and 10.5% from Perplexity, vs 1.76% for organic search.`, `GEO Statistics`, `https://www.omnibound.ai/blog/generative-engine-optimization-statistics`],
+      [`Only 11% of domains are cited by both ChatGPT and Perplexity — citations are earned engine-by-engine (study of 30M citations).`, `GEO Statistics`, `https://www.omnibound.ai/blog/generative-engine-optimization-statistics`],
+      [`The generative-engine-optimization market is projected to grow from $848M (2025) to $33.7B (2034), a 50.5% CAGR.`, `Market research`, `https://www.omnibound.ai/blog/generative-engine-optimization-statistics`],
+    ]],
+    ['Zero-Click & AI Overviews — the new search reality', [
+      [`58.5% of US Google searches now end with no click to any website — the largest single-year jump on record.`, `2025 data`, `https://superprompt.com/blog/zero-click-search-worsens-58-percent-google-no-clicks-november-2025-recovery-strategies`],
+      [`AI Overviews compress position-one CTR by up to 58% (nearly doubling in 8 months).`, `2025 data`, `https://superprompt.com/blog/zero-click-search-worsens-58-percent-google-no-clicks-november-2025-recovery-strategies`],
+      [`Featured snippets (position zero) earn a 42.9% CTR — higher than the standard #1 organic result (39.8%).`, `Launch Codex`, `https://launchcodex.com/blog/seo-geo-ai/what-is-position-zero-featured-snippets/`],
+      [`Traditional featured snippets are being replaced by AI Overviews ~83% of the time — visibility now depends on being the cited source.`, `The Digital Bloom`, `https://thedigitalbloom.com/learn/2025-organic-traffic-crisis-analysis-report/`],
+    ]],
+    ['Structured Data & Schema — the cheapest CTR win available', [
+      [`Pages shown as rich results earn an 82% higher click-through rate than non-rich pages.`, `Nestlé / Google case study`, `https://www.sixthcitymarketing.com/2023/12/20/schema-markup-statistics-facts/`],
+      [`Rich results capture ~58% of clicks vs ~41% for non-rich listings.`, `Milestone Research`, `https://www.sixthcitymarketing.com/2023/12/20/schema-markup-statistics-facts/`],
+      [`Structured data typically lifts CTR by 20–30% (up to 40% in some studies).`, `Outpace SEO`, `https://outpaceseo.com/article/schema-markup-structured-data/`],
+      [`Rotten Tomatoes saw 25% higher CTR on the 100,000 pages where they added structured data.`, `Google case study`, `https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data`],
+      [`Food Network gained a 35% increase in visits after enabling search features on 80% of its pages.`, `Google case study`, `https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data`],
+      [`Rakuten users spend 1.5× more time on pages with structured data.`, `Google case study`, `https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data`],
+      [`FAQ rich results post an average CTR of ~87%.`, `Industry analysis`, `https://www.digitalapplied.com/blog/structured-data-seo-2026-rich-results-guide`],
+    ]],
+    ['Title Tags & Meta Descriptions — control your search preview', [
+      [`62.9% of searchers say the meta description is the biggest factor in their decision to click.`, `Survey`, `https://www.elixirrdigital.com/2020/02/26/search-click-through-rates-the-power-of-meta-descriptions/`],
+      [`Titles of 40–60 characters earn ~33% higher CTR by avoiding truncation.`, `Analysis`, `https://azariangrowthagency.com/meta-tags-and-meta-descriptions/`],
+      [`The #1 organic result gets ~27.6% CTR; by position 10 it's just 2–3% (4M-result study).`, `Backlinko`, `https://backlinko.com/google-ctr-stats`],
+      [`Google rewrote 76% of title tags in Q1 2025 (up from 61% in 2023) — write strong ones or Google guesses.`, `Analysis`, `https://pixis.ai/blog/do-title-tags-meta-descriptions-drive-rankings/`],
+      [`Meta descriptions should run ~150–160 characters to display in full.`, `Industry standard`, `https://blckalpaca.at/en/knowledge-base/seo-geo/seo-metrics-kpis-analysis/click-through-rate-ctr-measuring-serp-performance`],
+    ]],
+    ['Page Speed & Core Web Vitals — milliseconds move money', [
+      [`Sites loading under 2 seconds convert at 3.05%, vs 1.94% at 3–4 seconds (billions of pageviews).`, `Portent`, `https://huckabuy.com/20-important-page-speed-bounce-rate-and-conversion-rate-statistics/`],
+      [`A 0.1-second load improvement lifted conversions 8.4% (retail) and 10.1% (travel).`, `Google / Deloitte — Milliseconds Make Millions`, `https://migratelab.com/resources/page-speed-affects-conversion-rates-research`],
+      [`A 2-second delay in load time increases bounce rate by 103%.`, `Study`, `https://huckabuy.com/20-important-page-speed-bounce-rate-and-conversion-rate-statistics/`],
+      [`53% of mobile visitors abandon a page that takes longer than 3 seconds to load.`, `Google`, `https://blog.hubspot.com/marketing/page-load-time-conversion-rates`],
+    ]],
+    ['Mobile & Responsive — most of the audience is on a phone', [
+      [`Mobile devices account for 64.35% of global website traffic (Jul 2025).`, `Statcounter / industry`, `https://www.designrush.com/agency/search-engine-optimization/trends/mobile-traffic-statistics`],
+      [`Mobile-friendly sites see 24% higher conversion; responsive frameworks drive 11% higher conversion than fixed layouts.`, `Analysis`, `https://wpdean.com/responsive-design-statistics/`],
+      [`Mobile bounce rates (~58–60%) run ~10 points higher than desktop (~48–50%).`, `Analysis`, `https://www.designrush.com/agency/search-engine-optimization/trends/mobile-traffic-statistics`],
+      [`A 1-second delay in mobile load time can cut conversions by 7%.`, `Industry`, `https://www.designrush.com/agency/search-engine-optimization/trends/mobile-traffic-statistics`],
+    ]],
+    ['Content Depth — substance earns links, rankings, and trust', [
+      [`Content over 3,000 words earns 77.2% more referring domains than content under 1,000 (912M posts analyzed).`, `Backlinko`, `https://backlinko.com/content-study`],
+      [`The average Google top-10 result contains ~1,447 words (11.8M results analyzed).`, `Backlinko`, `https://backlinko.com/search-engine-ranking`],
+      [`Posts with images receive ~150% more engagement (100%+ more on Facebook).`, `INMA (2024)`, `https://nogood.io/blog/open-graph-seo/`],
+    ]],
+    ['Backlinks & Authority — the web votes on credibility', [
+      [`Google's #1 result has, on average, 3.8× more backlinks than positions 2–10.`, `Backlinko (11.8M results)`, `https://backlinko.com/search-engine-ranking`],
+      [`The number of referring domains is the single strongest backlink factor correlated with rankings.`, `Backlinko`, `https://backlinko.com/search-engine-ranking`],
+      [`Overall site authority correlates with top-3 rankings more strongly than backlink count alone.`, `Analysis`, `https://rankwithlinks.com/backlink-quality-vs-quantity/`],
+    ]],
+    ['Trust & Security — an unsafe-feeling site loses conversions', [
+      [`SSL/HTTPS increases checkout completion by 18%; security badges lift conversions 22–42%.`, `Industry`, `https://www.scalify.ai/blog/website-trust-signal-statistics-what-makes-visitors-stay-2026`],
+      [`49% of consumers say a lack of trust badges signals fraud.`, `TrustedSite`, `https://www.crazyegg.com/blog/trust-signals/`],
+      [`If users must hunt for your privacy policy or terms, they assume you're hiding something — security/privacy indicators are primary trust signals.`, `Analysis`, `https://www.scalify.ai/blog/website-trust-signal-statistics-what-makes-visitors-stay-2026`],
+    ]],
+    ['Social Proof — reviews and logos do the convincing', [
+      [`79% of B2B buyers rely on social proof when making decisions.`, `Social proof stats`, `https://genesysgrowth.com/blog/social-proof-conversion-stats-for-marketing-leaders`],
+      [`92% of B2B buyers are more likely to purchase after reading a trusted review.`, `Trustmary`, `https://trustmary.com/social-proof/social-proof-statistics-that-may-surprise-you/`],
+      [`86% of B2B buyers check reviews before buying software.`, `WiserNotify`, `https://wisernotify.com/blog/social-proof-statistics/`],
+      [`88% of consumers trust user reviews as much as personal recommendations.`, `Trustmary`, `https://trustmary.com/social-proof/social-proof-statistics-that-may-surprise-you/`],
+      [`A comScore A/B test: client logos lifted conversions 43%; testimonials + logos together lifted them 84%.`, `comScore`, `https://genesysgrowth.com/blog/social-proof-conversion-stats-for-marketing-leaders`],
+      [`Hubstaff placing testimonials + customer logos under the CTA lifted conversion 59% (6.89% → 10.95%).`, `Case study`, `https://genesysgrowth.com/blog/social-proof-conversion-stats-for-marketing-leaders`],
+      [`Optimized, multi-format social proof has driven conversion lifts up to 270%.`, `WiserNotify`, `https://wisernotify.com/blog/social-proof-statistics/`],
+    ]],
+    ['Lead Capture & Conversion — no form means no follow-up', [
+      [`The median B2B visitor-to-lead conversion rate is 2.9% (100M+ data points, Aug 2025).`, `Ruler Analytics`, `https://withsurface.com/blog/b2b-lead-conversion-benchmarks-for-2025`],
+      [`A typical B2B funnel converts ~2.3% of visitors to leads — every point is pipeline.`, `Benchmark`, `https://withsurface.com/blog/b2b-lead-conversion-benchmarks-for-2025`],
+      [`Over 76% of potential online sales are lost to form abandonment; partial-submission capture alone lifts conversions 10%+.`, `Industry`, `https://brixongroup.com/en/lead-forms-in-b2b-the-perfect-balancing-act-between-data-depth-and-conversion-rate`],
+      [`Progressive profiling drives ~47% higher conversion with 32% richer lead profiles vs one-time forms.`, `Salesforce (2025)`, `https://brixongroup.com/en/lead-forms-in-b2b-the-perfect-balancing-act-between-data-depth-and-conversion-rate`],
+      [`Responding within 60 seconds boosts conversion 391%; odds of qualifying a lead drop 80% after 5 minutes.`, `Kixie / Harvard Business Review`, `https://withsurface.com/blog/b2b-lead-conversion-benchmarks-for-2025`],
+    ]],
+    ['Calls-to-Action — small button, big delta', [
+      [`Personalized CTAs perform 202% better than generic ones (330,000+ CTAs analyzed).`, `HubSpot`, `https://blog.hubspot.com/marketing/personalized-calls-to-action-convert-better-data`],
+      [`A single, clear CTA can convert up to 266% better than a page with competing CTAs.`, `WiserNotify`, `https://wisernotify.com/blog/call-to-action-stats/`],
+      [`A specific, clear CTA can increase conversion 161%.`, `WiserNotify`, `https://wisernotify.com/blog/call-to-action-stats/`],
+      [`First-person CTA copy (Start my free trial) beat Start your free trial by 90% in CTR.`, `Unbounce`, `https://www.sender.net/blog/call-to-action-statistics/`],
+      [`Adding urgency to a CTA can lift conversions up to 332%.`, `WiserNotify`, `https://wisernotify.com/blog/call-to-action-stats/`],
+    ]],
+    ['Conversational AI & Live Chat — the case for an on-site assistant', [
+      [`Websites using AI chatbots saw a 23% increase in conversion rates vs sites without.`, `Glassix study`, `https://www.glassix.com/article/study-shows-ai-chatbots-enhance-conversions-and-resolve-issues-faster`],
+      [`Chatbots produce 20–35% more leads and handle ~68% of inquiries autonomously.`, `Scalify`, `https://www.scalify.ai/blog/chatbot-on-website-statistics-2026-usage-conversions-roi`],
+      [`Visitors who engage with chat convert roughly 2–3× higher than non-chat visitors.`, `Which-50`, `https://which-50.com/chat-to-conversion-rate-statistics-by-industry/`],
+      [`Proactive chat can lift website conversions up to 38–40%.`, `Scalify`, `https://www.scalify.ai/blog/chatbot-on-website-statistics-2026-usage-conversions-roi`],
+      [`~58% of B2B companies have integrated chatbot technology; 63% use it for lead qualification.`, `Scalify`, `https://www.scalify.ai/blog/chatbot-on-website-statistics-2026-usage-conversions-roi`],
+    ]],
+    ['Video — motion holds attention and memory', [
+      [`Adding video to a landing page can increase conversions by up to 80%.`, `EyeView`, `https://saleslion.io/sales-statistics/using-video-on-landing-pages-can-increase-conversion-by-80/`],
+      [`Viewers retain ~95% of a message from video vs ~10% from text; people spend 1.4× longer on pages with video.`, `Levitate Media`, `https://levitatemedia.com/learn/video-conversion-statistics`],
+      [`88% of consumers say they've been convinced to buy by watching a video.`, `Levitate Media`, `https://levitatemedia.com/learn/video-conversion-statistics`],
+    ]],
+    ['Open Graph & Social Sharing — every share is a free ad (or a blank box)', [
+      [`Proper Open Graph previews lift click-through on shared links 2–3×; Tumblr grew Facebook traffic 250% after adding Open Graph.`, `Case studies`, `https://nogood.io/blog/open-graph-seo/`],
+      [`Optimized Open Graph data can deliver up to 50% more engagement.`, `Moz`, `https://www.bigredseo.com/open-graph-seo-social-sharing/`],
+    ]],
+    ['Privacy & Compliance — tracking without consent is now expensive', [
+      [`In Sept 2025 the CNIL fined Google €325M and SHEIN €150M for setting cookies / manipulating consent before permission.`, `CNIL`, `https://kukie.io/blog/cookie-consent-fines-2025-2026`],
+      [`Cookie-consent violations fall under GDPR's top tier: up to €20M or 4% of global revenue.`, `GDPR / ePrivacy`, `https://www.cookieyes.com/blog/cookie-consent-fines/`],
+      [`94.8% of the top million websites fail WCAG accessibility standards (avg. 297 issues/page); 5,100+ accessibility lawsuits were filed in 2025 — 77% against companies under $25M.`, `Accessibility.works / AudioEye`, `https://www.audioeye.com/post/accessibility-statistics/`],
+    ]],
+  ];
+  const researchCount = RESEARCH.reduce((n, s) => n + s[1].length, 0);
+  const researchHtml =
+    `<div class="sec" style="margin-top:24px"><h2>The Evidence: ${researchCount} Studies Behind This Audit</h2><p>Every recommendation in this report is backed by published research — not opinion. ${researchCount} statistics from named, checkable sources, grouped by the dimension they support.</p></div>` +
+    RESEARCH.map(([title, items]) =>
+      `<div class="sec"><h2 style="font-size:18px">${title}</h2></div>` +
+      `<div class="panel" style="font-size:13px;line-height:1.85">` +
+      items.map(([stat, src, url]) =>
+        `<p style="margin-bottom:11px">${stat} <a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#818cf8;text-decoration:none;white-space:nowrap">— ${src} ↗</a></p>`
+      ).join('') +
+      `</div>`
+    ).join('') +
+    `<div class="panel" style="margin-top:16px;font-size:12px;color:#64748b"><p><strong>Note:</strong> Figures are drawn from published industry research (2020–2026); methodologies, samples, and timeframes vary by source. Links are provided for verification.</p></div>`;
+
   // Build full page
   document.body.innerHTML = `
   <style>
@@ -558,6 +692,7 @@
     <button class="tab" data-tab="findings">Findings &amp; Strengths</button>
     ${audience ? '<button class="tab" data-tab="audience">🎯 Audience</button>' : ''}
     <button class="tab" data-tab="revenue">💰 Revenue Impact</button>
+    <button class="tab" data-tab="research">📚 The Proof</button>
   </div></div>
 
   <div class="cnt">
@@ -645,6 +780,9 @@
         <p style="margin-top:16px;padding-top:16px;border-top:1px solid #1e293b;color:#64748b;font-size:12px"><strong>Disclaimer:</strong> These projections use published industry benchmarks applied to your current website audit data. Actual results will vary based on market conditions, competition, sales execution, and implementation quality. These are directional estimates, not guarantees.</p>
       </div>
     </div>
+
+    <!-- THE PROOF — research evidence behind the methodology -->
+    <div class="pnl main-pnl" id="p-research">${researchHtml}</div>
 
     ${audiencePanelHtml}
 
