@@ -27,6 +27,7 @@ function table(headers,rows,widths){ const hr=new TableRow({tableHeader:true,chi
   const br=rows.map(r=>new TableRow({children:r.map((c,i)=>cell(String(c),widths[i]))}));
   return new Table({width:{size:CW,type:WidthType.DXA},columnWidths:widths,rows:[hr,...br]}); }
 const spacer=(h=80)=>new Paragraph({spacing:{after:h},children:[]});
+const callout=(label,text)=>new Paragraph({ shading:{type:ShadingType.CLEAR,fill:"EEF2FF"}, spacing:{before:180,after:180,line:276}, border:{ left:{style:BorderStyle.SINGLE,size:18,color:ACCENT,space:14}, top:{style:BorderStyle.SINGLE,size:2,color:"C7D2FE",space:8}, bottom:{style:BorderStyle.SINGLE,size:2,color:"C7D2FE",space:8}, right:{style:BorderStyle.SINGLE,size:2,color:"C7D2FE",space:8} }, children:[ new TextRun({text:label?(label+"  "):"",bold:true,color:ACCENT,size:22}), new TextRun({text,italics:true,bold:true,color:DARK,size:23}) ] });
 
 const cover=[
   new Paragraph({spacing:{before:600,after:60},children:[new TextRun({text:"TECHNICAL WHITE PAPER",bold:true,color:ACCENT,size:20})]}),
@@ -36,12 +37,12 @@ const cover=[
   P("How the WinTech scanner measures a website across eleven dimensions, calculates every score in the open, benchmarks a site against its competitors, and now explains each result in plain language — plus Audience Intel, a companion analysis that judges whether a site’s intended customer and its actual goal are in sync. With the honest limits of both.",{size:24,color:MUTE}),
   spacer(240),
   new Paragraph({spacing:{after:40},children:[new TextRun({text:"WinTech Partners",bold:true,color:INK,size:24})]}),
-  new Paragraph({children:[new TextRun({text:"WinTech Website Intelligence + Audience Intel  ·  Version 2.2  ·  June 2026",color:MUTE,size:20})]}),
+  new Paragraph({children:[new TextRun({text:"WinTech Website Intelligence + Audience Intel  ·  Version 2.3  ·  June 2026",color:MUTE,size:20})]}),
   new Paragraph({pageBreakBefore:true,children:[]}),
 ];
 
 const toc=[ H1("Contents"),
-  ...["1.  Executive Summary","2.  The Problem: Your Website Is Revenue Infrastructure","3.  The Eleven-Dimension Framework","4.  What We Measure, and Why","5.  Scoring Methodology","6.  Data Sources and Signals","7.  Findings and Prioritization","8.  Competitive Benchmarking","9.  Revenue Impact Modeling","10. Audience Intel: Is the Website Aimed at the Right Customer?","11. The Scanner's Own Security Posture","12. Honest Limitations and How to Interpret Results","13. Conclusion","Appendix A — Scoring Reference Tables","Appendix B — Benchmark Sources"]
+  ...["1.  Executive Summary","2.  The Problem: Your Website Is Revenue Infrastructure","3.  The Eleven-Dimension Framework","4.  What We Measure, and Why","5.  Scoring Methodology","6.  Data Sources and Signals","7.  Findings and Prioritization","8.  Competitive Benchmarking","9.  Revenue Impact Modeling","10. Audience Intel: Is the Website Aimed at the Right Customer?","11. The Scanner's Own Security Posture","12. Honest Limitations and How to Interpret Results","13. Turning Your Report Into a Plan","14. Conclusion","Appendix A — Scoring Reference Tables","Appendix B — Benchmark Sources"]
     .map(t=>new Paragraph({spacing:{after:90},children:[new TextRun({text:t,size:22,color:INK})]})),
   new Paragraph({pageBreakBefore:true,children:[]}),
 ];
@@ -49,15 +50,16 @@ const toc=[ H1("Contents"),
 const body=[]; const add=(...x)=>x.forEach(e=>body.push(e));
 
 add(H1("1.  Executive Summary"));
-add(P("A company's website is no longer a brochure; it is revenue infrastructure. It is the first place a prospect researches a vendor, the surface that search engines — and, increasingly, AI answer engines — read to decide whether to recommend you, and the funnel through which inbound pipeline either forms or quietly leaks away. Yet most websites are still judged subjectively, by opinion and aesthetics, rather than measured against the signals that actually drive discoverability, trust, and conversion."));
+add(P("For fifteen years, website quality meant SEO: title tags, meta descriptions, and links aimed at Google’s ten blue results. That model just broke. Buyers now begin their research by asking an AI — ChatGPT, Perplexity, Gemini. These engines do not rank pages; they read them, extract facts, and synthesize an answer that may never produce a click. If your site is not machine-readable, you are no longer merely ranked lower — you can be invisible. Meanwhile most websites are still judged subjectively, by opinion and aesthetics, rather than measured against the signals that now decide whether a business is found, trusted, and chosen."));
 add(P("The WinTech Website Intelligence Scanner replaces opinion with measurement. It evaluates a site across eleven weighted dimensions — SEO Fundamentals, AEO / AI Readiness, Technical Performance, Security, Accessibility, Content Quality, Trust & Conversion, Best Practices, Privacy & Compliance, Internationalization, and Analytics & Measurability — using real signals pulled directly from the live site and from independent third-party authorities. It returns a transparent 0–100 health score, a prioritized list of findings, a head-to-head comparison against named competitors, and a benchmark-based estimate of the revenue at stake."));
-add(P("Two recent additions make the audit more useful and more honest. Alongside its findings, every report now surfaces strengths — the dimensions a site already handles well — so the assessment reads as balanced rather than a list of complaints. And every dimension’s score can be opened to a plain-language WinTech Insight, written for that specific site, that explains why it scored what it did and the single most valuable next step."));
+add(P("Two recent additions make the audit more useful and more balanced. Alongside its findings, every report now surfaces strengths — the dimensions a site already handles well — so the assessment reads as balanced rather than a list of complaints. And every dimension’s score can be opened to a plain-language WinTech Insight, written for that specific site, that explains why it scored what it did and the single most valuable next step."));
 add(P("The platform also runs a second, complementary analysis. Where the audit asks whether a website is built well, Audience Intel asks a different question — is it aimed at the right customer, and is what it is trying to do clear? Section 10 documents how that works."));
 add(P("This paper documents exactly what we measure, how each dimension is scored, where the data comes from, how the competitive comparison and the revenue model are constructed, and — just as importantly — the limits of what an automated audit can and cannot tell you. We believe methodology should be inspectable. A score you cannot interrogate is a score you cannot trust."));
+add(callout("Core principle —","A score you cannot interrogate is a score you cannot trust."));
 
 add(H1("2.  The Problem: Your Website Is Revenue Infrastructure"));
-add(P("For fifteen years, “website quality” was largely synonymous with SEO: title tags, meta descriptions, and links aimed at ranking in Google's ten blue results. That model is fracturing. Buyers increasingly begin research not with a search box but with a question posed to an AI assistant — ChatGPT, Perplexity, Google's AI Overviews, Gemini. These systems do not rank pages; they read them, extract entities and facts, and synthesize an answer that may never produce a click. If a site is not machine-readable — if it lacks structured data stating, unambiguously, who the company is, what it sells, and what it knows — it can be invisible to the very tools shaping the buyer's shortlist."));
-add(P("We call this Answer Engine Optimization (AEO), and we treat it as a first-class dimension alongside traditional SEO. The shift does not retire the fundamentals; an H1 tag and a meta description still matter. It adds a new layer: schema markup, the emerging llms.txt standard, and content an AI can confidently cite."));
+add(P("Look closely at that break, because it is the most disruptive shift to hit websites in fifteen years. For most of that time, “website quality” was largely synonymous with SEO — title tags, meta descriptions, and links aimed at Google's ten blue results — and that model is now fracturing fast. Buyers increasingly begin research not with a search box but with a question posed to an AI assistant — ChatGPT, Perplexity, Google's AI Overviews, Gemini. These systems do not rank pages; they read them, extract entities and facts, and synthesize an answer that may never produce a click. If a site is not machine-readable — if it lacks structured data stating, unambiguously, who the company is, what it sells, and what it knows — it can be invisible to the very tools shaping the buyer's shortlist."));
+add(P("We call this Answer Engine Optimization (AEO), and we treat it as a first-class dimension alongside traditional SEO. The shift does not retire the fundamentals; an H1 tag and a meta description still matter. It adds a new layer: schema markup, the emerging llms.txt standard (a file that tells AI crawlers which content to prioritize), and content an AI can confidently cite."));
 add(P("Two older pressures have intensified in parallel. Security and privacy have become procurement gates: B2B buyers, especially in regulated industries, run lightweight checks on vendors before the first call, and a site with zero security headers — or trackers firing with no consent banner — can be silently disqualified. And conversion, supported by accessibility and the ability to measure, remains the difference between a website that merely informs and one that earns. Our framework measures all of these pressures together, because a prospect experiences them together."));
 
 add(H1("3.  The Eleven-Dimension Framework"));
@@ -77,6 +79,7 @@ add(table(["Dimension","Weight","What it answers"],[
   ["Analytics & Measurability","5%","Can the business measure any of this?"],
   ["Overall","100%","A single, weighted measure of website health."],
 ],[3400,1200,4760]));
+add(P("A note on weighting. SEO Fundamentals (16%) carries slightly more weight than AEO / AI Readiness (12%), even though AEO is the higher-growth risk — and the reason is deliberate. SEO is the prerequisite gating factor: AI answer engines reach your content through the same crawlable foundation that search engines use, so if the baseline is broken (an unreachable page, a blocked crawler, malformed HTML), no amount of schema markup makes you citable. AEO is weighted as the fastest-rising risk on top of a foundation that has to exist first."));
 
 add(H1("4.  What We Measure, and Why"));
 add(H3("SEO Fundamentals (16%)"));
@@ -85,11 +88,13 @@ add(LEAD("Why it matters:","these are the signals search engines have expected f
 add(H3("AEO / AI Readiness (12%)"));
 add(LEAD("What we check:","structured data — JSON-LD, microdata, and RDFa — and the specific schema types present (Organization, FAQ, HowTo, Breadcrumb), and the presence of an llms.txt file that tells AI systems which content is authoritative and citable."));
 add(LEAD("Why it matters:","structured data is how a machine reads your business. Without it, an AI answering a question about your category has no machine-readable reason to mention you — even when you are the best answer."));
+add(LEAD("AI crawler access:","we also read robots.txt for the AI crawlers themselves — GPTBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended, CCBot. A site can be perfectly structured for AI and still be invisible because it is quietly telling those crawlers to stay out; we surface that as a high-value finding."));
+add(LEAD("Rendered vs. raw:","for JavaScript-built sites, an optional headless pass compares the server HTML against the fully rendered page. When key signals — an H1, the body copy, schema — appear only after JavaScript runs, we flag it: Google renders JavaScript and sees them, but most AI crawlers do not, so that content is invisible to AI answers."));
 add(H3("Technical Performance (12%)"));
-add(LEAD("What we check:","server response time (time to first byte), total load time, page weight, stylesheet and script counts, render-blocking JavaScript, image lazy-loading, and the Lighthouse mobile performance score when available."));
+add(LEAD("What we check:","server response time (time to first byte), total load time, page weight, stylesheet and script counts, render-blocking JavaScript, image lazy-loading, the Lighthouse mobile performance score when available, and Chrome’s real-user (CrUX) field data — actual Largest Contentful Paint, Interaction to Next Paint, and Cumulative Layout Shift from real visitors — when Google returns it."));
 add(LEAD("Why it matters:","speed is both a ranking signal and a conversion tax; each additional second of load measurably increases bounce. These are also among the cheapest fixes — usually configuration, not redesign."));
 add(H3("Security (12%)"));
-add(LEAD("What we check:","a valid SSL certificate, the six recommended security headers (HSTS, Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), a security.txt disclosure file (RFC 9116), and an independent Mozilla HTTP Observatory grade when reachable."));
+add(LEAD("What we check:","a valid SSL certificate, the six recommended security headers (HSTS, Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), a security.txt disclosure file (RFC 9116), an independent Mozilla HTTP Observatory grade when reachable, and a check for mixed content — insecure http resources loaded by an https page."));
 add(LEAD("Why it matters:","security headers are inexpensive to add and conspicuous when missing. A security-conscious prospect can read them in seconds, and in enterprise, financial-services, and healthcare procurement, zero configured headers can end a conversation before it begins."));
 add(H3("Accessibility (10%)"));
 add(LEAD("What we check:","image alt-text coverage, form-field labels, semantic landmarks (<main>, <nav>, <header>, <footer> or ARIA roles), heading structure, descriptive link text, the declared page language, and the Lighthouse accessibility score when available."));
@@ -101,7 +106,7 @@ add(H3("Trust & Conversion (8%)"));
 add(LEAD("What we check:","lead-capture forms, visible contact details (phone and email), social-profile links, a privacy-policy link, a mobile viewport, and a favicon."));
 add(LEAD("Why it matters:","traffic without capture is a leak. A homepage with nothing to fill in and no legitimacy signals turns curiosity into a closed tab."));
 add(H3("Best Practices & Tech Hygiene (6%)"));
-add(LEAD("What we check:","HTTPS, a declared character encoding, a standards-mode doctype, a mobile viewport, a favicon, and the Lighthouse best-practices score — which surfaces console errors, deprecated APIs, and known-vulnerable libraries."));
+add(LEAD("What we check:","HTTPS, a declared character encoding, a standards-mode doctype, a mobile viewport, a favicon, the Lighthouse best-practices score — which surfaces console errors, deprecated APIs, and known-vulnerable libraries — and a sample check for broken internal links."));
 add(LEAD("Why it matters:","these are the quiet hygiene signals that separate a maintained site from a neglected one. None is glamorous; collectively they shape how browsers, crawlers, and careful buyers judge whether the site is looked after."));
 add(H3("Privacy & Compliance (6%)"));
 add(LEAD("What we check:","a linked privacy policy, terms of service, and a cookie-consent mechanism — cross-checked against whether trackers are actually loading."));
@@ -119,11 +124,11 @@ add(P("Two ideas govern the scoring. First, partial credit: a signal that exists
 add(P("The overall score maps to a letter grade. The bands are deliberately demanding in the middle: most functional-but-unoptimized sites land in the C–D range, which is precisely where the highest-leverage, lowest-effort fixes live."));
 add(spacer(60));
 add(table(["Grade","Score range","Typical meaning"],[
-  ["A","90–100","Elite. Optimized across nearly every dimension."],
-  ["B","80–89","Strong. Minor, targeted gaps remain."],
-  ["C","60–79","Functional with clear, addressable weaknesses."],
-  ["D","40–59","Underperforming. Several dimensions need work."],
-  ["F","0–39","Largely invisible to search and AI; foundational fixes needed."],
+  ["A","90–100","Elite. Optimized across nearly every dimension — protect the lead."],
+  ["B","80–89","Strong. Minor, targeted gaps are all that separate you from elite."],
+  ["C","60–79","Leaving money on the table. Functional, but clear, high-leverage gaps are suppressing discoverability and trust."],
+  ["D","40–59","Commercially vulnerable. Competitors are winning the prospects you should be capturing."],
+  ["F","0–39","Largely invisible to search and AI. Foundational fixes are needed before anything else compounds."],
 ],[1200,1800,6360]));
 
 add(H1("6.  Data Sources and Signals"));
@@ -131,15 +136,18 @@ add(P("The scanner measures; it does not guess. Signals are gathered in parallel
 add(bullet("The page's own HTML, fetched and parsed to read tags, headings, schema (JSON-LD, microdata, and RDFa), links, content, form labels, landmarks, analytics tags, and consent mechanisms."));
 add(bullet("HTTP response headers, read straight from the server, for security configuration."));
 add(bullet("The TLS certificate, validated for the SSL check."));
-add(bullet("Google PageSpeed Insights (Lighthouse) for mobile performance, accessibility, and best-practice scores, when the API responds."));
+add(bullet("Google PageSpeed Insights (Lighthouse) for mobile performance, accessibility, and best-practice scores — plus Chrome’s real-user CrUX field data — when the API responds."));
 add(bullet("Mozilla's HTTP Observatory (MDN) for an independent security grade when reachable, with an Observatory-style grade computed in-house from the response headers as a deterministic fallback."));
-add(bullet("robots.txt, the XML sitemap, llms.txt, and security.txt — each fetched and validated."));
+add(bullet("robots.txt — including the directives aimed at AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended) — the XML sitemap, llms.txt, and security.txt, each fetched and validated."));
+add(bullet("Optionally, a headless-browser rendered view of the page, used to re-read JavaScript-built content and flag what is visible to Google but hidden from non-JavaScript AI crawlers."));
 add(P("Using independent third parties for the security, performance, and accessibility grades is deliberate: those numbers are not WinTech's opinion. They are externally verifiable, and a prospect can reproduce them."));
 
 add(H1("7.  Findings and Prioritization"));
 add(P("Beyond the score, the scanner produces a prioritized findings list spanning every dimension. Each finding carries a severity — Critical, High, Medium, or Low — and findings are sorted so the most consequential appear first. Critical findings (for example, a missing H1, absent business schema, or a site not served over HTTPS) are issues actively suppressing discoverability or credibility today. High findings include gaps such as no analytics at all (you cannot measure), unlabeled form fields (an accessibility and ADA exposure), or no privacy policy. The severity model is intentionally conservative: we reserve “Critical” for issues that are both high-impact and unambiguous, so the label keeps its meaning."));
 add(P("A report that only ever lists problems reads like a complaint, so the scanner also surfaces strengths: for every dimension a site already handles well, it states what is working and why it matters. The same audit therefore shows both the gaps to close and the foundations to build on — every one of the eleven dimensions appears as either a finding or a strength, so none is silently dropped."));
 add(P("Each dimension can also be opened to a WinTech Insight — a short, plain-language explanation, generated for that specific site, of why the dimension scored what it did, what it means for getting found and winning customers, and the single highest-value next step. These insights are written at scan time so drilling into any score is instant, and they fall back to a rule-based explanation when the AI service is unavailable, so a reader is never left without context."));
+add(P("Every finding also carries an effort-to-fix tag — Config (a setting, minutes), Content (copy, hours), or Dev (code, days) — so the report can be worked as a to-do list rather than read as a verdict: clear the minutes-level fixes today, schedule the rest. Section 13 lays out how to sequence them."));
+add(P("And because every scan is stored, a re-scan shows the score trend — the change in the overall score and each dimension since the last run — turning a one-time audit into a measurable before-and-after."));
 
 add(H1("8.  Competitive Benchmarking"));
 add(P("A score in isolation answers “how good is this site?” A buyer's real question is usually sharper: “how good is this site compared to the competition?” The scanner answers it directly. Pointed at the subject site alongside up to three named competitors, it scores every site on the same eleven dimensions and renders them head-to-head: an overall ranking, a per-dimension comparison showing exactly where the site leads and trails, and a best-in-class target line marking the score an elite site would post."));
@@ -150,21 +158,23 @@ add(P("A score is diagnostic; a dollar figure is motivating. The scanner transla
 add(bullet("Conversion uplifts are relative, not absolute. A tier that improves conversion by “15%” raises a 0.3% rate to roughly 0.35%, not to 15.3%. Stacking absolute percentage points onto a low base produces absurd results; relative uplifts compound realistically."));
 add(bullet("Conversion is capped. The model will not project a blended conversion rate above 5% — comfortably below the 8–15% that published benchmarks reserve for elite sites — preventing the math from drifting into figures a sophisticated buyer would dismiss."));
 add(bullet("Every projection is specific to the site. A tier’s uplift is credited only for the items the audit found missing; a site that already passes a tier earns little or nothing from it. Two different sites therefore produce two different projections, and the model never takes credit for fixing something that is not broken."));
+add(callout("The honest revenue pledge —","Conversion uplifts are relative, not absolute. We cap projected conversion at 5% (below the 8–15% elite benchmark), and we never take credit for fixing something that isn’t broken."));
 add(P("The result is a set of directional figures: additional monthly pipeline, annualized pipeline, estimated annual revenue gain, and additional leads per month. Every input is adjustable. These are estimates, not guarantees: they apply published benchmarks (Appendix B) to your current audit data, and actual results depend on market, competition, and execution. The model is designed to be credible and conservative — not to maximize a headline number."));
 
 add(H1("10.  Audience Intel: Is the Website Aimed at the Right Customer?"));
 add(P("The audit asks whether a website is built well. Audience Intel asks something the audit deliberately does not: is the site pointed at the right person, and is the job it wants done clear? A site can score well on all eleven technical dimensions and still quietly fail — because the audience it appears to address and the action it actually wants are out of sync, or because a first-time visitor cannot tell within seconds who the site is for and what to do next."));
 add(P("The analysis reads the homepage the way a new visitor would — the headline, sub-headline, calls to action, and visible copy — and asks three plain questions: who is this site for, what single action is it trying to get a visitor to take, and are those two things aligned? To keep the read from being one model’s idiosyncratic opinion, the same page is evaluated independently by three different language models — a GPT, a Gemini, and a Claude model — and their answers are then compared."));
 add(LEAD("Positioning clarity:","agreement between the models becomes a signal in its own right. When three independent readers describe the same audience and the same goal, the site’s message is clear; when they diverge, the message itself is ambiguous — a conclusion no single model could reach alone. The output reports the consensus audience and goal, an alignment verdict (aligned, partial, or mismatch), and a clarity rating derived from how much the readers agreed."));
-add(P("A short read — audience, goal, and the call-to-action actually visible on the page — is returned immediately and free. The deeper analysis, which adds each model’s reasoning and the specific evidence it drew from the page, is the gated tier. Because a deep read is only a handful of inexpensive model calls, it is well suited to run on a schedule as part of an ongoing monthly report rather than as a one-off, keeping cost predictable."));
+add(P("A short read — audience, goal, and the call-to-action actually visible on the page — is returned immediately and free. The deeper analysis, which adds each model’s reasoning and the specific evidence it drew from the page, is the gated tier. Because this analysis is lightweight, it is designed to run on a monthly schedule as part of an ongoing report rather than as a one-off."));
 add(LEAD("What it is not:","Audience Intel interprets public homepage copy; it is not a substitute for a company’s own knowledge of its customers. It is most valuable as a mirror — a fast, outside read of the message a stranger actually receives — and as an early warning when that message and the business’s intent have drifted apart."));
+add(LEAD("Output:","both the audit and Audience Intel produce a clean, downloadable report with a one-click PDF. When a prospect runs both together, the two are merged into a single combined report — one document, one Download PDF — covering website health and audience alignment side by side."));
 add(H1("11.  The Scanner's Own Security Posture"));
 add(P("We hold our own infrastructure to the standard we audit. The scanner application sends the same security headers it checks for, signs its administrative sessions with HMAC rather than forgeable tokens, compares secrets in constant time, and gates expensive operations behind authenticated controls. A tool that flags “zero security headers” while running with none of its own would not deserve the finding. Practicing the methodology is part of the methodology."));
 
 add(H1("12.  Honest Limitations and How to Interpret Results"));
 add(P("An automated audit is a high-signal starting point, not the final word. Its limits are worth stating plainly:"));
 add(bullet("It evaluates a single page (typically the homepage), not a full-site crawl. Deep issues on interior pages are out of scope for a quick scan."));
-add(bullet("It reads server-rendered HTML and does not execute client-side JavaScript. A site that renders entirely in the browser may under-report on word count, headings, or analytics — though the crawler-visible version is also what search and AI see first."));
+add(bullet("For JavaScript-built sites, an optional rendered-view pass loads the page in a headless browser and re-reads it, so the scores reflect what a visitor actually sees. When that pass is off, the scanner reads server HTML only and marks the affected scores low-confidence rather than failing them — it never silently mis-scores a client-rendered site."));
 add(bullet("Accessibility and best-practices scoring is signal-based (and uses Lighthouse where available); it is not a substitute for a manual WCAG audit or assistive-technology testing."));
 add(bullet("Some enrichment still depends on third-party availability — Google PageSpeed is rate-limited and occasionally unreachable, in which case that score reads N/A. Where Mozilla’s Observatory is unavailable, the scanner now computes an equivalent grade in-house from the response headers, so a security grade is always present."));
 add(bullet("The result is a point-in-time snapshot; a score is accurate as of its timestamp, which is why every report is timestamped."));
@@ -172,12 +182,27 @@ add(bullet("Revenue figures are directional estimates built on published benchma
 add(bullet("Audience Intel reflects how language models read your public homepage copy. It is a fast outside interpretation — strongest as a mirror and an early warning — not a replacement for what you know about your own customers."));
 add(P("Read correctly, the audit answers one question well: where is the highest-leverage work? It is a map, not the territory — and the fastest way we know to turn a vague sense that “the website could be better” into a specific, prioritized, measurable plan."));
 
-add(H1("13.  Conclusion"));
+add(H1("13.  Turning Your Report Into a Plan"));
+add(P("A score is a diagnosis; the value is in what you do next. We recommend reading the report in this order:"));
+add(bullet("Start with the Critical findings (Section 7) — these are actively costing you discoverability or credibility right now."));
+add(bullet("Filter by effort. Every finding is tagged Config (a setting, minutes), Content (copy, hours), or Dev (code, days). Clear the Config-level Criticals first — missing security headers, an AI-crawler block in robots.txt, absent Open Graph tags, a missing canonical. These take minutes and immediately stop the bleeding on trust and AI visibility."));
+add(bullet("Add the highest-value Content fixes next — a real meta description, an 800-word homepage, alt text — which compound in search and AI over the following weeks."));
+add(bullet("Schedule the Dev work — structured data, lead-capture forms, performance — into your next sprint, sequenced by the revenue model’s four tiers (Section 9)."));
+add(bullet("Re-scan. Because every scan is stored, your next report shows the score trend — proof the work moved the number."));
+add(P("If your overall grade is a C or D, resist the urge to fix everything at once. Two or three Config-level Criticals usually move both the score and the conversation more than a month of redesign."));
+add(H1("14.  Conclusion"));
 add(P("Websites are measured too often by taste and too rarely by evidence. The WinTech Website Intelligence methodology exists to close that gap: to evaluate the eleven dimensions that actually govern whether a business is found, trusted, used, and chosen — across search engines, AI answer engines, security and privacy reviewers, assistive technology, and human visitors — to show how a site stacks up against its competition, and to do it transparently enough that anyone can check the work. The score begins the conversation. The findings are the plan. And the methodology documented here is the reason to believe both."));
 
 add(new Paragraph({pageBreakBefore:true,children:[]}));
 add(H1("Appendix A — Scoring Reference Tables"));
 add(P("Each dimension is scored out of 100 by summing the points below. Where a signal lists two values, the higher is awarded for full compliance and the lower for partial. For Performance, Accessibility, and Best Practices, Google Lighthouse's audited score is used directly when available; the HTML-signal allocations below are the fallback. The overall score is the weighted average using the framework weights in Section 3."));
+add(H3("Effort to fix"));
+add(P("In the live report, every finding is also tagged with the effort it takes to resolve, so the list can be triaged by cost as well as by severity:"));
+add(table(["Effort","Typical time","Examples"],[
+  ["Config","Minutes","Security headers, robots.txt / AI-crawler rules, Open Graph tags, a canonical URL, character encoding, hreflang, a broken link or mixed-content URL."],
+  ["Content","Hours","A meta description, an 800-word homepage, image alt text, heading structure, a privacy policy, llms.txt."],
+  ["Dev","Days","Structured data / schema, lead-capture forms, accessibility code (form labels, landmarks), installing analytics, performance work, server-side rendering."],
+],[1500,1700,6160]));
 add(H3("SEO Fundamentals"));
 add(table(["Signal","Points"],[["Title tag (well-sized / present only)","15 / 5"],["Meta description","15"],["Exactly one H1 (single / multiple)","15 / 8"],["Canonical URL","10"],["Open Graph tags","10"],["Image alt-text (≥90% / ≥50%)","10 / 5"],["XML sitemap","10"],["Twitter Card tags","5"],["robots.txt","5"],["Word count (≥800 / ≥400)","5 / 2"]],[6360,3000]));
 add(H3("AEO / AI Readiness"));
@@ -223,8 +248,8 @@ const doc = new Document({
     headers:{ first:new Header({children:[new Paragraph({})]}),
       default:new Header({children:[new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:4,color:"E5E7EB",space:6}},children:[new TextRun({text:"WinTech Partners  ·  Website Intelligence Methodology",color:MUTE,size:16})]})]}) },
     footers:{ first:new Footer({children:[new Paragraph({})]}),
-      default:new Footer({children:[new Paragraph({tabStops:[{type:TabStopType.RIGHT,position:9360}],border:{top:{style:BorderStyle.SINGLE,size:4,color:"E5E7EB",space:6}},children:[new TextRun({text:"Technical White Paper  ·  v2.2",color:MUTE,size:16}),new TextRun({text:"\tPage ",color:MUTE,size:16}),new TextRun({children:[PageNumber.CURRENT],color:MUTE,size:16})]})]}) },
+      default:new Footer({children:[new Paragraph({tabStops:[{type:TabStopType.RIGHT,position:9360}],border:{top:{style:BorderStyle.SINGLE,size:4,color:"E5E7EB",space:6}},children:[new TextRun({text:"Technical White Paper  ·  v2.3",color:MUTE,size:16}),new TextRun({text:"\tPage ",color:MUTE,size:16}),new TextRun({children:[PageNumber.CURRENT],color:MUTE,size:16})]})]}) },
     children:[...cover,...toc,...body],
   }],
 });
-Packer.toBuffer(doc).then(buf=>{ const out="/sessions/kind-fervent-bell/mnt/outputs/whitepaper/WinTech-Website-Intelligence-Whitepaper-v2.2.docx"; fs.writeFileSync(out,buf); console.log("written:",out,"("+buf.length+" bytes)"); });
+Packer.toBuffer(doc).then(buf=>{ const out="/sessions/kind-fervent-bell/mnt/outputs/whitepaper/WinTech-Website-Intelligence-Whitepaper-v2.3.docx"; fs.writeFileSync(out,buf); console.log("written:",out,"("+buf.length+" bytes)"); });
